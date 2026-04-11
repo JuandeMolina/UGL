@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Error 404 — UGL{% endblock %}
+{% block content %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div class="error-card">
+        <p class="error-number">404</p>
+        <div class="error-divider"></div>
+        <p class="title">Página no encontrada</p>
+        <p class="description">La dirección que buscas no existe o fue movida.</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn-home">← Volver al inicio</a>
+    </div>
+</div>
+{% endblock %}

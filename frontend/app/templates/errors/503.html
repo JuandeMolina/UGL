@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Error 503 — UGL{% endblock %}
+{% block content %}
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px">
+    <div class="error-card">
+        <p class="error-number">503</p>
+        <div class="error-divider"></div>
+        <p class="title">Servicio no disponible</p>
+        <p class="description">El servidor de datos no está respondiendo. Asegúrate de que el backend esté en marcha.</p>
+        <a href="{{ url_for('main.dashboard') }}" class="btn-home">← Reintentar</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}UGL — Liga de Fútbol Sala{% endblock %}</title>
+    <meta name="description" content="{% block meta_description %}Gestión privada de la liga de fútbol sala.{% endblock %}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <!-- Background decorations -->
+    <div class="bg-blob bg-blob-1"></div>
+    <div class="bg-blob bg-blob-2"></div>
+    <div class="bg-blob bg-blob-3"></div>
+    <div class="dot dot-1"></div>
+    <div class="dot dot-2"></div>
+    <div class="dot dot-3"></div>
+    <div class="dot dot-4"></div>
+
+    {% if current_user.is_authenticated %}
+    <nav class="navbar">
+        <a href="{{ url_for('main.dashboard') }}" class="navbar-brand">
+            <span class="navbar-name">⚽ UGL</span>
+        </a>
+        <div class="navbar-spacer"></div>
+        <ul class="navbar-nav">
+            <li><a href="{{ url_for('main.dashboard') }}" class="nav-link">Inicio</a></li>
+            <li><a href="{{ url_for('main.players') }}" class="nav-link">Jugadores</a></li>
+            <li><a href="{{ url_for('main.matches') }}" class="nav-link">Partidos</a></li>
+        </ul>
+        <div class="gap-3 d-flex align-center" style="margin-left: 16px;">
+            <span class="nav-username">{{ current_user.email }}</span>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Salir</a>
+        </div>
+    </nav>
+    {% endif %}
+
+    <div class="page-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                <div class="form-error" style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto;">
+                    ⚠ {{ message }}
+                </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>
