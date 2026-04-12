@@ -307,3 +307,16 @@ def admin_edit_match(match_id):
         abort(404)
     
     return render_template("admin/match_edit.html", match=r.json())
+
+@main.route("/admin/stats")
+@login_required
+def admin_stats():
+    if not current_user.is_admin:
+        abort(403)
+    
+    r, status = api_get(f"{API_BASE}/auth/admin/stats")
+    if status != 200 or not r:
+        abort(503)
+    
+    stats = r.json()
+    return render_template("admin/stats.html", stats=stats)

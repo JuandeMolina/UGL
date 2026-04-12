@@ -10,7 +10,7 @@ License: MIT
 from flask_restx import Namespace, Resource, fields
 from flask_jwt_extended import create_access_token
 
-from ..models import User
+from ..models import User, Player, Match, MatchAssignment
 from ..core import db
 
 ns = Namespace("auth", description="Autenticación")
@@ -72,3 +72,56 @@ class Me(Resource):
             "is_admin": user.is_admin,
         }, 200
 
+
+@ns.route("/admin/stats")
+class AdminStats(Resource):
+    @jwt_required()
+    def get(self):
+        """Estadísticas del sistema (solo admins)."""
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
+        
+        if not user or not user.is_admin:
+            return {"message": "Acceso denegado. Solo administradores."}, 403
+        
+        # Contar usuarios
+        total_users = User.query.count()
+        admin_count = User.query.filter_by(is_admin=True).count()
+        users_with_player = User.query.filter(User.player_id.isnot(None)).count()
+        
+        # Contar partidos
+        total_matches = Match.query.count()
+        completed_matches = Match.query.filter_by(is_completed=True).count()
+        pending_matches = total_matches - completed_matches
+        
+        # Contar jugadores
+        total_players = Player.query.count()
+        
+        # Lista de usuarios
+        users_list = []
+        for u in User.query.order_by(User.email).all():
+            users_list.append({
+                "id": u.id,
+                "email": u.email,
+                "is_admin": u.is_admin,
+                "player_id": u.player_id,
+                "player_name": u.player.name if u.player else None
+            })
+        
+        return {
+            "users": {
+                "total": total_users,
+                "admins": admin_count,
+                "with_player": users_with_player,
+                "without_player": total_users - users_with_player,
+                "list": users_list
+            },
+            "matches": {
+                "total": total_matches,
+                "completed": completed_matches,
+                "pending": pending_matches
+            },
+            "players": {
+                "total": total_players
+            }
+        }, 200
