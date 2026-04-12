@@ -1,0 +1,33 @@
+2026-04-12 12:29:21,302 - frontend.app.core - ERROR - Exception on /auth/login [GET]
+Traceback (most recent call last):
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/app.py", line 1511, in wsgi_app
+    response = self.full_dispatch_request()
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/app.py", line 919, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/app.py", line 917, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/app.py", line 902, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^
+  File "/home/juande/UGL/frontend/app/routes/auth.py", line 47, in login
+    return render_template("login.html")
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/templating.py", line 151, in render_template
+    return _render(app, template, context)
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/templating.py", line 128, in _render
+    app.update_template_context(context)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask/app.py", line 530, in update_template_context
+    context.update(self.ensure_sync(func)())
+                   ~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask_login/utils.py", line 405, in _user_context_processor
+    return dict(current_user=_get_user())
+                             ~~~~~~~~~^^
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask_login/utils.py", line 370, in _get_user
+    current_app.login_manager._load_user()
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "/home/juande/UGL/venv/lib/python3.14/site-packages/flask_login/login_manager.py", line 364, in _load_user
+    user = self._user_callback(user_id)
+  File "/home/juande/UGL/frontend/app/core/__init__.py", line 98, in load_user
+    return User.from_dict(r.json())
+           ^^^^
+NameError: name 'User' is not defined

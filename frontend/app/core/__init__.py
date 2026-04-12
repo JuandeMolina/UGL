@@ -84,24 +84,19 @@ def create_app(config_class=None):
     @login_manager.user_loader
     def load_user(user_id):
         from flask import session
-        import requests
-        from ..models import User
-
+        from ..utils import api_get
+        
         token = session.get("jwt")
         if not token:
             return None
 
-        try:
-            r = requests.get(
-                f"{API_BASE}/auth/me",
-                headers={"Authorization": f"Bearer {token}"},
-                timeout=5,
-            )
-            if r.status_code != 200:
-                return None
-            return User.from_dict(r.json())
-        except requests.RequestException:
+        # api_get automatically handles the internal client routing!
+        r, status = api_get(f"{API_BASE}/auth/me", handle_401=False)
+        if status != 200 or r is None:
             return None
+            
+        from ..models import User
+        return User.from_dict(r.json())
 
     return app
 
