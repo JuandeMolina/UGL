@@ -8,7 +8,7 @@ License: MIT
 """
 
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import create_access_token
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 from ..models import User, Player, Match, MatchAssignment
 from ..core import db
