@@ -22,6 +22,8 @@ class Config:
     DEBUG = False
     TESTING = False
     WTF_CSRF_ENABLED = True
+    PERMANENT_SESSION_LIFETIME = 60 * 60 * 24 * 365  # 1 year in seconds
+    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEp1ek28wEoWjKLBhxgfZ60z/+c9+yJm6xP1ltyx54TnAPqsqKgKMKXzF08C49etwsmEFA1clMwUQkbpM4c+H2jQ==")
 
 
 class DevelopmentConfig(Config):

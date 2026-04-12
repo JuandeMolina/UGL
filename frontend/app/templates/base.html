@@ -1,52 +1,210 @@
 <!DOCTYPE html>
 <html lang="es">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}UGL — Liga de Fútbol Sala{% endblock %}</title>
-    <meta name="description" content="{% block meta_description %}Gestión privada de la liga de fútbol sala.{% endblock %}">
+    <meta name="description"
+        content="{% block meta_description %}Gestión privada de la liga de fútbol sala.{% endblock %}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
+
 <body>
     <!-- Background decorations -->
     <div class="bg-blob bg-blob-1"></div>
     <div class="bg-blob bg-blob-2"></div>
     <div class="bg-blob bg-blob-3"></div>
-    <div class="dot dot-1"></div>
-    <div class="dot dot-2"></div>
-    <div class="dot dot-3"></div>
-    <div class="dot dot-4"></div>
+
+    <svg width="0" height="0" style="position: absolute;">
+        <defs>
+            <linearGradient id="active-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:var(--blue);stop-opacity:1" />
+                <stop offset="100%" style="stop-color:var(--green);stop-opacity:1" />
+            </linearGradient>
+        </defs>
+    </svg>
 
     {% if current_user.is_authenticated %}
     <nav class="navbar">
         <a href="{{ url_for('main.dashboard') }}" class="navbar-brand">
-            <span class="navbar-name">⚽ UGL</span>
+            <span class="navbar-name">UEFA Gestapo League</span>
         </a>
         <div class="navbar-spacer"></div>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('main.dashboard') }}" class="nav-link">Inicio</a></li>
-            <li><a href="{{ url_for('main.players') }}" class="nav-link">Jugadores</a></li>
-            <li><a href="{{ url_for('main.matches') }}" class="nav-link">Partidos</a></li>
+            <li><a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.path == url_for('main.dashboard') %}nav-active{% endif %}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Inicio</span>
+                </a></li>
+            <li><a href="{{ url_for('main.players') }}" class="nav-link {% if request.path.startswith('/players') %}nav-active{% endif %}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                            <circle cx="9" cy="7" r="4"></circle>
+                            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+                            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Jugadores</span>
+                </a></li>
+            <li><a href="{{ url_for('main.matches') }}" class="nav-link {% if request.path.startswith('/matches') %}nav-active{% endif %}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                            <line x1="16" y1="2" x2="16" y2="6"></line>
+                            <line x1="8" y1="2" x2="8" y2="6"></line>
+                            <line x1="3" y1="10" x2="21" y2="10"></line>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Partidos</span>
+                </a></li>
+            {% if current_user.is_admin %}
+            <li><a href="{{ url_for('main.admin_new_match') }}" class="nav-link nav-link-admin {% if request.path.startswith('/admin') or request.path.endswith('/edit') or request.path.endswith('/new') %}nav-active{% endif %}" title="Panel Admin">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M5 3L2 21h20L19 3l-7 7-7-7z"></path>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Admin</span>
+                </a></li>
+            {% endif %}
+            <li><a href="javascript:void(0)" id="push-toggle" class="nav-link" title="Notificaciones">
+                    <span class="nav-icon">
+                        <svg id="push-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor"
+                            stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Alertas</span>
+                </a></li>
         </ul>
-        <div class="gap-3 d-flex align-center" style="margin-left: 16px;">
+        <div class="navbar-user-actions" style="margin-left: 10px;">
             <span class="nav-username">{{ current_user.email }}</span>
-            <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm">Salir</a>
+            <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm nav-logout" title="Salir">
+                <span class="nav-icon">
+                    <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                        <polyline points="16 17 21 12 16 7"></polyline>
+                        <line x1="21" y1="12" x2="9" y2="12"></line>
+                    </svg>
+                </span>
+                <span class="nav-label">Salir</span>
+            </a>
         </div>
     </nav>
     {% endif %}
 
     <div class="page-content">
         {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                <div class="form-error" style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto;">
-                    ⚠ {{ message }}
-                </div>
-                {% endfor %}
-            {% endif %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="form-error" style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto;">
+            ⚠ {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
         {% endwith %}
 
         {% block content %}{% endblock %}
     </div>
+    {% if current_user.is_authenticated %}
+    <script>
+        const VAPID_PUBLIC_KEY = "{{ VAPID_PUBLIC_KEY }}";
+        const API_BASE_URL = "{{ API_BASE }}";
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            return outputArray;
+        }
+
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            navigator.serviceWorker.register('/static/sw.js')
+                .then(function (swReg) {
+                    console.log('Service Worker is registered', swReg);
+                    updateSubscriptionUI();
+                })
+                .catch(function (error) {
+                    console.error('Service Worker Error', error);
+                });
+        }
+
+        async function updateSubscriptionUI() {
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+            const icon = document.getElementById('push-icon');
+            const link = document.getElementById('push-toggle');
+
+            if (subscription) {
+                icon.style.stroke = "var(--green)";
+                link.title = "Notificaciones activadas";
+            } else {
+                icon.style.stroke = "currentColor";
+                link.title = "Activar notificaciones";
+            }
+        }
+
+        document.getElementById('push-toggle').addEventListener('click', async () => {
+            if (!window.isSecureContext) {
+                alert('Las notificaciones Push requieren un contexto seguro (HTTPS o localhost). \n\nSi estás usando una IP local (ej. 192.168.x.x), el navegador bloquea esta función por seguridad.');
+                return;
+            }
+
+            const registration = await navigator.serviceWorker.ready;
+            const subscription = await registration.pushManager.getSubscription();
+
+            if (subscription) {
+                // Unsubscribe
+                await subscription.unsubscribe();
+                await fetch(API_BASE_URL + '/push/unsubscribe', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
+                    },
+                    body: JSON.stringify({ endpoint: subscription.endpoint })
+                });
+            } else {
+                // Subscribe
+                const result = await Notification.requestPermission();
+                if (result === 'granted') {
+                    const newSubscription = await registration.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    });
+
+                    const res = await fetch(API_BASE_URL + '/push/subscribe', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
+                        },
+                        body: JSON.stringify(newSubscription)
+                    });
+                    if (!res.ok) {
+                        const err = await res.json();
+                        alert('Error al suscribirse: ' + (err.message || 'Error desconocido'));
+                    }
+                }
+            }
+            updateSubscriptionUI();
+        });
+    </script>
+    {% endif %}
 </body>
+
 </html>

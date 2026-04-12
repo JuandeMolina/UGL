@@ -12,10 +12,11 @@ from flask_login import UserMixin
 
 
 class User(UserMixin):
-    def __init__(self, id, email, player_id=None):
+    def __init__(self, id, email, player_id=None, is_admin=False):
         self.id = id
         self.email = email
         self.player_id = player_id
+        self.is_admin = is_admin
 
     @staticmethod
     def from_dict(data):
@@ -24,4 +25,5 @@ class User(UserMixin):
             id=data["id"],
             email=data["email"],
             player_id=data.get("player_id"),
+            is_admin=data.get("is_admin", False),
         )

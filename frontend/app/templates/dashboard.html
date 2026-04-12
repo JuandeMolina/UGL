@@ -1,0 +1,309 @@
+{% extends "base.html" %}
+{% block title %}Inicio — UGL{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+
+    {# ── Cabecera de bienvenida ───────────────────────────────────────── #}
+    <div class="dash-page-header anim-slide-up">
+        <p class="eyebrow">Panel principal</p>
+        <h2>Hola, {{ display_name }} 👋</h2>
+        <p>Consulta el próximo partido y los rankings de la liga.</p>
+    </div>
+
+    {# ── Próximo partido ──────────────────────────────────────────────── #}
+    <div class="anim-slide-up anim-delay-1" style="margin-bottom: 32px;">
+        <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-light);
+                  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px;">
+            Próximo partido
+        </p>
+
+        {% if next_match %}
+        <a href="{{ url_for('main.match_detail', match_id=next_match.id) }}"
+            style="text-decoration: none; display: block;">
+            <div class="card next-match-card">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <div class="stat-icon stat-icon-blue" style="font-size: 22px; flex-shrink: 0;">⚽</div>
+                    <div style="flex: 1; min-width: 0;">
+                        <p style="font-weight: 700; color: var(--text-dark); font-size: 1rem; margin-bottom: 3px;">
+                            Jornada {{ next_match.id }}
+                        </p>
+                        <p style="font-size: 0.85rem; color: var(--text-muted);">
+                            📅 {{ next_match.date | datetime_es }}
+                        </p>
+                        {% if next_match.assignment_count > 0 %}
+                        <p style="font-size: 0.78rem; font-weight: 600; color: var(--blue); margin-top: 4px;">
+                            💸 {{ "%.2f"|format(next_match.cost / next_match.assignment_count) }}€ / jugador
+                        </p>
+                        {% endif %}
+                    </div>
+                </div>
+
+
+                <div style="margin-top: 14px; display: flex; align-items: center; gap: 8px; justify-content: flex-end;">
+                    <span class="badge badge-blue">Pendiente</span>
+                    <span style="font-size: 1.2rem; color: var(--blue);">→</span>
+                </div>
+            </div>
+        </a>
+        {% else %}
+    <div class="card" style="padding: 36px 26px; text-align: center;">
+        <p style="font-size: 2.4rem; margin-bottom: 12px;">📅</p>
+        <p style="font-weight: 600; color: var(--text-mid); margin-bottom: 5px; font-size: 1rem;">
+            Sin partidos próximamente
+        </p>
+        <p style="font-size: 0.85rem; color: var(--text-light);">
+            No hay jornadas programadas de momento. ¡Volved cuando sepáis la fecha!
+        </p>
+    </div>
+    {% endif %}
+</div>
+
+{# ── Rankings (scroll horizontal) ────────────────────────────────── #}
+<div class="anim-slide-up anim-delay-2">
+    <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-light);
+                  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px;">
+        Rankings de la temporada
+    </p>
+
+    <div class="tops-scroll">
+
+        {# Macro para las medallas #}
+        {% macro medal(rank) %}
+        {% if rank == 1 %}🥇
+        {% elif rank == 2 %}🥈
+        {% elif rank == 3 %}🥉
+        {% else %}<span
+            style="font-size:0.9rem;color:var(--text-light);font-weight:700;min-width:20px;text-align:center;">{{
+            rank }}</span>
+        {% endif %}
+        {% endmacro %}
+
+        {# ── Tarjeta Top Goleadores ── #}
+        <div class="card top-card">
+            <div class="top-card-header">
+                <div class="stat-icon stat-icon-blue" style="font-size: 20px;">⚽</div>
+                <h3 style="font-size: 1rem;">Top Goleadores</h3>
+            </div>
+
+            {% if top_scorers %}
+            <ul class="top-list">
+                {% for rank, player in top_scorers %}
+                <li>
+                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                        <span class="top-medal">{{ medal(rank) }}</span>
+                        <span class="top-name">{{ player.name }}</span>
+                        <span class="top-stat top-stat-blue">{{ player.goals }} ⚽</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="top-empty">Sin datos aún</p>
+            {% endif %}
+        </div>
+
+        {# ── Tarjeta Top Asistentes ── #}
+        <div class="card top-card">
+            <div class="top-card-header">
+                <div class="stat-icon stat-icon-green" style="font-size: 20px;">🎯</div>
+                <h3 style="font-size: 1rem;">Top Asistentes</h3>
+            </div>
+
+            {% if top_assisters %}
+            <ul class="top-list">
+                {% for rank, player in top_assisters %}
+                <li>
+                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                        <span class="top-medal">{{ medal(rank) }}</span>
+                        <span class="top-name">{{ player.name }}</span>
+                        <span class="top-stat top-stat-green">{{ player.assists }} 🎯</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="top-empty">Sin datos aún</p>
+            {% endif %}
+        </div>
+
+        {# ── Tarjeta Top Victorias ── #}
+        <div class="card top-card">
+            <div class="top-card-header">
+                <div class="stat-icon stat-icon-amber" style="font-size: 20px;">🏆</div>
+                <h3 style="font-size: 1rem;">Top Victorias</h3>
+            </div>
+
+            {% if top_winners %}
+            <ul class="top-list">
+                {% for rank, player in top_winners %}
+                <li>
+                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                        <span class="top-medal">{{ medal(rank) }}</span>
+                        <span class="top-name">{{ player.name }}</span>
+                        <span class="top-stat top-stat-amber">{{ player.wins }} 🏆</span>
+                    </a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p class="top-empty">Sin datos aún</p>
+            {% endif %}
+        </div>
+
+    </div>{# /tops-scroll #}
+</div>
+
+</div>
+
+<style>
+    /* ── Próximo partido ─────────────────────────────────────────── */
+    .next-match-card {
+        padding: 22px 26px;
+        display: flex;
+        align-items: center;
+        transition: transform .2s var(--ease-spring), box-shadow .2s;
+        cursor: pointer;
+    }
+
+    .next-match-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 14px 48px rgba(20, 40, 80, 0.13);
+    }
+
+    /* ── Scroll de rankings ──────────────────────────────────────── */
+    .tops-scroll {
+        display: flex;
+        gap: 18px;
+        overflow-x: auto;
+        padding-bottom: 16px;
+        width: 100%;
+        /* Firefox */
+        scrollbar-width: thin;
+        scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+    }
+
+    .tops-scroll::-webkit-scrollbar {
+        height: 5px;
+    }
+
+    .tops-scroll::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .tops-scroll::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.35);
+        border-radius: 99px;
+    }
+
+    /* ── Tarjeta de ranking ──────────────────────────────────────── */
+    .top-card {
+        padding: 22px 20px 14px;
+        min-width: 280px;
+        flex-shrink: 0;
+    }
+
+    .top-card-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 16px;
+        padding-bottom: 14px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Lista dentro de la tarjeta ──────────────────────────────── */
+    .top-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
+    .top-list-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 8px;
+        border-radius: var(--radius-xs);
+        text-decoration: none;
+        transition: background .15s;
+    }
+
+    .top-list-row:hover {
+        background: rgba(59, 130, 246, 0.05);
+    }
+
+    .top-medal {
+        font-size: 1rem;
+        min-width: 24px;
+        text-align: center;
+        flex-shrink: 0;
+    }
+
+    .top-name {
+        flex: 1;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .top-stat {
+        font-size: 0.84rem;
+        font-weight: 700;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .top-stat-blue {
+        color: var(--blue);
+    }
+
+    .top-stat-green {
+        color: var(--green);
+    }
+
+    .top-stat-amber {
+        color: #f59e0b;
+    }
+
+    .top-empty {
+        font-size: 0.84rem;
+        color: var(--text-light);
+        text-align: center;
+        padding: 24px 0 10px;
+    }
+
+    @media (max-width: 768px) {
+        .dash-wrapper {
+            padding: 16px;
+        }
+
+        .tops-scroll {
+            margin-left: -16px;
+            margin-right: -16px;
+            width: calc(100% + 32px);
+            padding-left: 16px;
+            padding-right: 16px;
+            gap: 12px;
+        }
+
+        .top-card {
+            min-width: 250px;
+            padding: 18px 15px 10px;
+        }
+
+        .top-card-header {
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+        }
+
+        .top-list-row {
+            padding: 7px 6px;
+        }
+    }
+</style>
+{% endblock %}

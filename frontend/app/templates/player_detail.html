@@ -1,0 +1,298 @@
+{% extends "base.html" %}
+{% block title %}{{ player.name }} — UGL{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper" style="max-width: 780px;">
+
+    {# ── Volver ───────────────────────────────────────────────────────── #}
+    <div class="anim-slide-up" style="margin-bottom: 24px;">
+        <a href="{{ url_for('main.players') }}" class="btn btn-ghost btn-sm">← Jugadores</a>
+    </div>
+
+    {# ── Cabecera del jugador ─────────────────────────────────────────── #}
+    <div class="card player-header-card anim-slide-up anim-delay-1">
+        <div class="player-header-avatar">
+            {% if player.photo_url %}
+            <img src="{{ player.photo_url }}" alt="{{ player.name }}" class="player-header-photo">
+            {% else %}
+            <span class="player-jersey-number">
+                {{ player.jersey_number }}
+            </span>
+            {% endif %}
+        </div>
+        <div>
+            <h2 style="margin-bottom: 6px;">{{ player.name }}</h2>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                {% if player.is_goalkeeper %}
+                <span class="player-badge player-badge-gk">🧤 Portero</span>
+                {% else %}
+                <span class="player-badge player-badge-field">⚽ {{ player.position_label or 'Jugador' }}</span>
+                {% endif %}
+            </div>
+
+        </div>
+        {% if current_user.is_admin %}
+        <div style="margin-left: auto;">
+            <a href="{{ url_for('main.player_edit', player_id=player.id) }}" class="btn btn-ghost btn-sm">Editar Perfil
+                ✏️</a>
+        </div>
+        {% endif %}
+    </div>
+
+    {# ── Descripción ─────────────────────────────────────────────────── #}
+    {% if player.description %}
+    <div class="card anim-slide-up anim-delay-1" style="margin-top: 14px; padding: 20px 24px;">
+        <p class="section-label">Sobre el jugador</p>
+        <p style="font-size: 0.95rem; line-height: 1.6; color: var(--text-dark); margin-top: 8px;">
+            {{ player.description }}
+        </p>
+    </div>
+    {% endif %}
+
+    {# ── Estadísticas ─────────────────────────────────────────────────── #}
+    <div class="anim-slide-up anim-delay-2" style="margin-top: 24px;">
+        <p class="section-label">Rendimiento</p>
+
+        <div class="stats-row"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px;">
+
+            <div class="card stat-card">
+                <div class="stat-icon stat-icon-blue">⚽</div>
+                <div>
+                    <p class="stat-value">{{ player.stats.goals }}</p>
+                    <p class="stat-label">Goles</p>
+                </div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon stat-icon-green">🎯</div>
+                <div>
+                    <p class="stat-value">{{ player.stats.assists }}</p>
+                    <p class="stat-label">Asistencias</p>
+                </div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon stat-icon-amber">🏟️</div>
+                <div>
+                    <p class="stat-value">{{ player.stats.matches_played }}</p>
+                    <p class="stat-label">Partidos</p>
+                </div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: #b45309;">⭐</div>
+                <div>
+                    <p class="stat-value">{{ player.stats.mvp_count }}</p>
+                    <p class="stat-label">MVPs</p>
+                </div>
+            </div>
+
+        </div>
+
+        {# ── Estadísticas Avanzadas ── #}
+        <div class="stats-row"
+            style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 14px; margin-top: 14px;">
+
+            <div class="card stat-card">
+                <div class="stat-icon" style="background: rgba(59, 130, 246, 0.08); color: var(--blue);">📈</div>
+                <div>
+                    <p class="stat-value" style="font-size: 1.2rem;">{{ player.stats.goals_per_match }}</p>
+                    <p class="stat-label">G / Partido</p>
+                </div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon" style="background: rgba(16, 185, 129, 0.08); color: var(--green);">✨</div>
+                <div>
+                    <p class="stat-value" style="font-size: 1.2rem;">{{ player.stats.ga_per_match }}</p>
+                    <p class="stat-label">G+A / Partido</p>
+                </div>
+            </div>
+
+            <div class="card stat-card">
+                <div class="stat-icon" style="background: rgba(99, 102, 241, 0.08); color: #6366f1;">🏆</div>
+                <div>
+                    <p class="stat-value" style="font-size: 1.2rem;">{{ player.stats.win_percentage }}%</p>
+                    <p class="stat-label">% Victorias</p>
+                </div>
+            </div>
+
+            {% if player.is_goalkeeper %}
+            <div class="card stat-card">
+                <div class="stat-icon" style="background: rgba(239, 68, 68, 0.08); color: #ef4444;">🛡️</div>
+                <div>
+                    <p class="stat-value" style="font-size: 1.2rem;">{{ player.stats.goals_conceded }}</p>
+                    <p class="stat-label">Goles Encajados</p>
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+
+        {# ── Resultados ── #}
+        <div class="card anim-slide-up anim-delay-3" style="padding: 22px 26px; margin-top: 14px;">
+            <p class="section-label" style="margin-bottom: 16px;">Resultados</p>
+            <div
+                style="display: flex; gap: 0; border-radius: var(--radius-md); overflow: hidden; border: 1px solid var(--border);">
+
+                <div class="result-block result-win">
+                    <p class="result-value">{{ player.stats.wins }}</p>
+                    <p class="result-label">Victorias</p>
+                </div>
+
+                <div class="result-block result-draw">
+                    <p class="result-value">{{ player.stats.draws }}</p>
+                    <p class="result-label">Empates</p>
+                </div>
+
+                <div class="result-block result-loss">
+                    <p class="result-value">{{ player.stats.losses }}</p>
+                    <p class="result-label">Derrotas</p>
+                </div>
+
+            </div>
+
+            {# Barra de progreso W/D/L #}
+            {% set total = player.stats.wins + player.stats.draws + player.stats.losses %}
+            {% if total > 0 %}
+            <div class="wdl-bar" style="margin-top: 14px;">
+                {% set w_pct = (player.stats.wins / total * 100) | round(1) %}
+                {% set d_pct = (player.stats.draws / total * 100) | round(1) %}
+                {% set l_pct = (player.stats.losses / total * 100) | round(1) %}
+                {% if w_pct > 0 %}
+                <div style="width: {{ w_pct }}%; background: var(--green);" title="Victorias {{ w_pct }}%"></div>
+                {% endif %}
+                {% if d_pct > 0 %}
+                <div style="width: {{ d_pct }}%; background: #94a3b8;" title="Empates {{ d_pct }}%"></div>
+                {% endif %}
+                {% if l_pct > 0 %}
+                <div style="width: {{ l_pct }}%; background: #f87171;" title="Derrotas {{ l_pct }}%"></div>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    .section-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 12px;
+    }
+
+    /* ── Cabecera ── */
+    .player-header-card {
+        padding: 28px 30px;
+        display: flex;
+        align-items: center;
+        gap: 22px;
+    }
+
+    .player-header-avatar {
+        width: 72px;
+        height: 72px;
+        border-radius: 50%;
+        background: var(--grad);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        overflow: hidden;
+        box-shadow: 0 4px 18px rgba(59, 130, 246, 0.25);
+    }
+
+    .player-header-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .player-jersey-number {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+    }
+
+    /* ── Badges (reutilizados del listado) ── */
+    .player-badge {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 3px 10px;
+        border-radius: 99px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .player-badge-gk {
+        background: rgba(245, 158, 11, 0.1);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .player-badge-field {
+        background: rgba(59, 130, 246, 0.08);
+        color: var(--blue);
+        border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    /* ── Bloques W/D/L ── */
+    .result-block {
+        flex: 1;
+        padding: 16px 12px;
+        text-align: center;
+    }
+
+    .result-win {
+        background: rgba(16, 185, 129, 0.07);
+    }
+
+    .result-draw {
+        background: rgba(148, 163, 184, 0.07);
+        border-left: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+    }
+
+    .result-loss {
+        background: rgba(239, 68, 68, 0.07);
+    }
+
+    .result-value {
+        font-family: var(--font-display);
+        font-size: 1.8rem;
+        line-height: 1;
+        margin-bottom: 4px;
+        color: var(--text-dark);
+    }
+
+    .result-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+    }
+
+    /* ── Barra W/D/L ── */
+    .wdl-bar {
+        display: flex;
+        height: 6px;
+        border-radius: 99px;
+        overflow: hidden;
+        gap: 2px;
+    }
+
+    .wdl-bar div {
+        border-radius: 99px;
+        transition: width .4s var(--ease-spring);
+    }
+</style>
+{% endblock %}

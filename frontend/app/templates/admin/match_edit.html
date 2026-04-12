@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}Editar Partido — UGL{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper" style="max-width: 600px;">
+
+    {# ── Volver ───────────────────────────────────────────────────────── #}
+    <div class="anim-slide-up" style="margin-bottom: 24px;">
+        <a href="{{ url_for('main.match_detail', match_id=match.id) }}" class="btn btn-ghost btn-sm">← Cancelar</a>
+    </div>
+
+    <div class="dash-page-header anim-slide-up">
+        <p class="eyebrow">Administración</p>
+        <h2>Editar Partido</h2>
+        <p>Actualiza los detalles de la jornada {{ match.matchday }}.</p>
+    </div>
+
+    <div class="card anim-slide-up anim-delay-1" style="padding: 32px;">
+        <form method="POST" class="admin-form">
+
+            <div class="form-group">
+                <label for="matchday">Número de Jornada</label>
+                <input type="number" id="matchday" name="matchday" value="{{ match.matchday }}" required min="1">
+            </div>
+
+            <div class="form-group">
+                <label for="date">Fecha y Hora</label>
+                {# Formatear fecha para el input datetime-local #}
+                <input type="datetime-local" id="date" name="date" value="{{ match.date[:16] }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="location">Ubicación</label>
+                <input type="text" id="location" name="location" value="{{ match.location }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="cost">Coste de la pista (€)</label>
+                <input type="number" id="cost" name="cost" step="0.01" value="{{ match.cost }}" required>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                <div class="form-group">
+                    <label for="pda_kit_color">Camiseta PDA</label>
+                    <select id="pda_kit_color" name="pda_kit_color" class="form-select">
+                        <option value="" {% if not match.pda_kit_color %}selected{% endif %}>(Sin asignar)</option>
+                        {% for color in ['Blanco', 'Negro', 'Azul', 'Rojo', 'Verde', 'Amarillo', 'Gris'] %}
+                        <option value="{{ color }}" {% if match.pda_kit_color == color %}selected{% endif %}>{{ color }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="atg_kit_color">Camiseta ATG</label>
+                    <select id="atg_kit_color" name="atg_kit_color" class="form-select">
+                        <option value="" {% if not match.atg_kit_color %}selected{% endif %}>(Sin asignar)</option>
+                        {% for color in ['Blanco', 'Negro', 'Azul', 'Rojo', 'Verde', 'Amarillo', 'Gris'] %}
+                        <option value="{{ color }}" {% if match.atg_kit_color == color %}selected{% endif %}>{{ color }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 20px;">
+                <input type="checkbox" id="playing_now" name="playing_now" {% if match.playing_now %}checked{% endif %} 
+                       style="width: 20px; height: 20px; cursor: pointer;">
+                <label for="playing_now" style="font-weight: 600; cursor: pointer; margin-bottom: 0;">Partido "En Juego" (🟢 En Vivo)</label>
+            </div>
+
+            <div style="margin-top: 32px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">Guardar Cambios</button>
+            </div>
+
+        </form>
+    </div>
+
+</div>
+
+<style>
+    .admin-form { display: flex; flex-direction: column; gap: 20px; }
+    .form-group { display: flex; flex-direction: column; gap: 8px; }
+    .form-group label { font-size: 0.88rem; font-weight: 700; color: var(--text-dark); }
+    .form-group input, .form-group .form-select {
+        padding: 12px 16px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 0.95rem;
+        color: var(--text-dark);
+        transition: border-color .2s, box-shadow .2s;
+        width: 100%;
+    }
+    .form-group input:focus, .form-group .form-select:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+</style>
+{% endblock %}

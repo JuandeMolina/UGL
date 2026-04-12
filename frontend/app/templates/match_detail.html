@@ -1,0 +1,578 @@
+{% extends "base.html" %}
+{% block title %}Jornada {{ match.matchday }} — UGL{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper" style="max-width: 820px;">
+
+    {# ── Volver ───────────────────────────────────────────────────────── #}
+    <div class="anim-slide-up" style="margin-bottom: 24px;">
+        <a href="{{ url_for('main.matches') }}" class="btn btn-ghost btn-sm">← Partidos</a>
+    </div>
+
+    {# ── Cabecera del partido ─────────────────────────────────────────── #}
+    <div class="card match-header anim-slide-up anim-delay-1">
+
+        <div
+            style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <p class="section-label">Jornada {{ match.matchday }}</p>
+                <p style="font-size: 0.88rem; color: var(--text-muted);">📅 {{ match.date | datetime_es }} | 📍 {{
+                    match.location }}</p>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+                {% if current_user.is_admin %}
+                <a href="{{ url_for('main.admin_edit_match', match_id=match.id) }}" class="btn btn-ghost btn-sm">Editar
+                    ✏️</a>
+                {% endif %}
+                {% if match.is_completed %}
+                <span class="status-badge status-done">Finalizado</span>
+                {% elif match.playing_now %}
+                <span class="status-badge status-pending"
+                    style="background: rgba(59, 130, 246, 0.1); color: var(--blue); border-color: rgba(59, 130, 246, 0.2);">En
+                    Juego 🟢</span>
+                {% else %}
+                <span class="status-badge status-pending">Pendiente</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Coste #}
+        <div
+            style="margin-bottom: 20px; display: flex; gap: 16px; align-items: center; background: rgba(148, 163, 184, 0.05); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--border); width: 100%;">
+            <div>
+                <p class="section-label" style="margin-bottom: 2px;">Coste Total</p>
+                <p style="font-weight: 700; color: var(--text-dark);">{{ "%.2f"|format(match.cost) }}€</p>
+            </div>
+            <div style="width: 1px; height: 30px; background: var(--border);"></div>
+            <div>
+                <p class="section-label" style="margin-bottom: 2px;">Por persona</p>
+                {% set total_players = match.assignments|length %}
+                <p style="font-weight: 700; color: var(--blue);">
+                    {% if total_players > 0 %}
+                    {{ "%.2f"|format(match.cost / total_players) }}€
+                    {% else %}
+                    —
+                    {% endif %}
+                </p>
+            </div>
+            <div style="width: 1px; height: 30px; background: var(--border);"></div>
+            <div style="flex: 1;">
+                <p class="section-label" style="margin-bottom: 2px;">👕<br>PDA</p>
+                <p style="font-weight: 700; color: var(--text-dark);">{{ match.pda_kit_color or '—' }}</p>
+            </div>
+            <div style="flex: 1;">
+                <p class="section-label" style="margin-bottom: 2px;">👕<br>ATG</p>
+                <p style="font-weight: 700; color: var(--text-dark);">{{ match.atg_kit_color or '—' }}</p>
+            </div>
+        </div>
+
+        {# Marcador #}
+        {% if match.is_completed or match.playing_now or (current_user.is_admin and match.assignments) %}
+        <div class="scoreboard">
+            <div class="scoreboard-team">
+                <span class="team-dot team-dot-blue" style="width:10px;height:10px;"></span>
+                <span class="scoreboard-team-name">PDA</span>
+            </div>
+            <div class="scoreboard-score">
+                <span>{{ match.pda_goals }}</span>
+                <span class="score-sep">—</span>
+                <span>{{ match.atg_goals }}</span>
+            </div>
+            <div class="scoreboard-team scoreboard-team-right">
+                <span class="scoreboard-team-name">ATG</span>
+                <span class="team-dot team-dot-red" style="width:10px;height:10px;"></span>
+            </div>
+        </div>
+        {% else %}
+        <div class="scoreboard">
+            <div class="scoreboard-team">
+                <span class="team-dot team-dot-blue" style="width:10px;height:10px;"></span>
+                <span class="scoreboard-team-name">PDA</span>
+            </div>
+            <div class="scoreboard-vs">VS</div>
+            <div class="scoreboard-team scoreboard-team-right">
+                <span class="scoreboard-team-name">ATG</span>
+                <span class="team-dot team-dot-red" style="width:10px;height:10px;"></span>
+            </div>
+        </div>
+        {% endif %}
+
+        {# MVP Info #}
+        {% if match.is_completed and match.mvp_name %}
+        <div
+            style="text-align: center; margin-top: 24px; padding: 16px; background: linear-gradient(to right, rgba(245, 158, 11, 0.05), rgba(245, 158, 11, 0.1)); border: 1px solid rgba(245, 158, 11, 0.2); border-radius: var(--radius-md); width: 100%;">
+            <p class="section-label" style="color: #b45309; margin-bottom: 8px;">⭐ MVP DEL PARTIDO ⭐</p>
+            <p style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark);">{{ match.mvp_name }}</p>
+
+            {% if current_user.is_admin %}
+            <div style="margin-top: 16px; border-top: 1px solid rgba(245, 158, 11, 0.2); padding-top: 12px;">
+                <form action="{{ url_for('main.match_reopen', match_id=match.id) }}" method="POST"
+                    onsubmit="return confirm('¿Reabrir el acta? Podrás editar estadísticas de nuevo.');">
+                    <button type="submit" class="btn btn-ghost btn-sm"
+                        style="color: #b45309; border-color: rgba(245, 158, 11, 0.3);">
+                        🔓 Reabrir Acta
+                    </button>
+                </form>
+            </div>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        {# Botón Finalizar Acta (Solo Admin y si no está completado) #}
+        {% if current_user.is_admin and not match.is_completed and match.assignments %}
+        <div style="text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px dashed var(--border);">
+            <form action="{{ url_for('main.match_complete', match_id=match.id) }}" method="POST"
+                onsubmit="return confirm('¿Estás seguro de cerrar el acta? Se calculará el marcador final y se guardarán los rankings.');"
+                style="max-width: 400px; margin: 0 auto;">
+
+                <div style="margin-bottom: 20px; text-align: left;">
+                    <label for="mvp_id" class="section-label" style="display: block; margin-bottom: 8px;">Elegir MVP
+                        del
+                        Partido</label>
+                    <select name="mvp_id" id="mvp_id" required class="form-select" style="width: 100%;">
+                        <option value="" disabled selected>Selecciona al mejor jugador...</option>
+                        {% for a in match.assignments | sort(attribute='player_name') %}
+                        <option value="{{ a.player_id }}">{{ a.player_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <button type="submit" class="btn btn-primary"
+                    style="padding: 12px 32px; font-size: 0.95rem; width: 100%;">Finalizar y Cerrar Acta 🔒</button>
+            </form>
+            <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 12px;">Una vez cerrada, las
+                estadísticas
+                individuales se sumarán al total de la temporada.</p>
+        </div>
+        {% endif %}
+
+    </div>
+
+    {# ── Panel de Gestión (Admin) ──────────────────────────────────────── #}
+    {% if current_user.is_admin and not match.is_completed %}
+    <div class="card anim-slide-up anim-delay-2" style="margin-top: 20px; padding: 22px;">
+        <p class="section-label" style="margin-bottom: 16px;">Administrar Plantillas</p>
+        <form action="{{ url_for('main.match_assign', match_id=match.id) }}" method="POST"
+            style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 200px;">
+                <select name="player_id" required class="form-select" style="width: 100%;">
+                    <option value="" disabled selected>Seleccionar jugador...</option>
+                    {% for p in players %}
+                    <option value="{{ p.id }}">{{ p.name }} ({{ p.position_label }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div style="width: 120px;">
+                <select name="team" required class="form-select" style="width: 100%;">
+                    <option value="PDA">PDA</option>
+                    <option value="ATG">ATG</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary btn-sm" style="padding: 0 20px;">+ Añadir</button>
+        </form>
+    </div>
+    {% endif %}
+
+    {# ── Plantillas de los equipos ─────────────────────────────────────── #}
+    {% set team_pda = match.assignments | selectattr("team", "equalto", "PDA") | list %}
+    {% set team_atg = match.assignments | selectattr("team", "equalto", "ATG") | list %}
+
+    <div class="teams-cols anim-slide-up anim-delay-3" style="margin-top: 20px;">
+
+        {# Equipo PDA #}
+        <div class="card team-col">
+            <div class="team-col-header team-col-header-a">
+                <span class="team-dot team-dot-blue" style="width:9px;height:9px;"></span>
+                <h3 style="font-size: 0.95rem;">Playas de Auschwitz</h3>
+                <span class="team-count">{{ team_pda | length }}</span>
+            </div>
+            {% if team_pda %}
+            <ul class="assignment-list">
+                {% for a in team_pda | sort(attribute='player_name') %}
+                <li class="assignment-row">
+                    <a href="{{ url_for('main.player_detail', player_id=a.player_id) }}" class="assignment-name">
+                        {{ a.player_name }}
+                    </a>
+                    <div class="assignment-right">
+                        <div class="assignment-stats-edit">
+                            {# Goles #}
+                            <div class="stat-ctrl">
+                                <span class="stat-label">G</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=-1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-minus">-</button>
+                                </form>
+                                {% endif %}
+                                <span class="stat-val">{{ a.goals }}</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-plus">+</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            {# Asistencias #}
+                            <div class="stat-ctrl">
+                                <span class="stat-label">A</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=-1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-minus">-</button>
+                                </form>
+                                {% endif %}
+                                <span class="stat-val">{{ a.assists }}</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-plus">+</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if current_user.is_admin and not match.is_completed %}
+                        <form action="{{ url_for('main.match_unassign', match_id=match.id, assignment_id=a.id) }}"
+                            method="POST" style="display:inline;">
+                            <button type="submit" class="btn-delete" title="Quitar">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color:var(--text-light);font-size:0.84rem;padding:24px 0;text-align:center;">Sin jugadores</p>
+            {% endif %}
+        </div>
+
+        {# Equipo ATG #}
+        <div class="card team-col">
+            <div class="team-col-header team-col-header-b">
+                <span class="team-dot team-dot-red" style="width:9px;height:9px;"></span>
+                <h3 style="font-size: 0.95rem;">Atlético Gestapoense</h3>
+                <span class="team-count">{{ team_atg | length }}</span>
+            </div>
+            {% if team_atg %}
+            <ul class="assignment-list">
+                {% for a in team_atg | sort(attribute='player_name') %}
+                <li class="assignment-row">
+                    <a href="{{ url_for('main.player_detail', player_id=a.player_id) }}" class="assignment-name">
+                        {{ a.player_name }}
+                    </a>
+                    <div class="assignment-right">
+                        <div class="assignment-stats-edit">
+                            <div class="stat-ctrl">
+                                <span class="stat-label">G</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=-1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-minus">-</button>
+                                </form>
+                                {% endif %}
+                                <span class="stat-val">{{ a.goals }}</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-plus">+</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                            <div class="stat-ctrl">
+                                <span class="stat-label">A</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=-1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-minus">-</button>
+                                </form>
+                                {% endif %}
+                                <span class="stat-val">{{ a.assists }}</span>
+                                {% if current_user.is_admin and not match.is_completed %}
+                                <form
+                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=1) }}"
+                                    method="POST">
+                                    <button class="btn-stat-plus">+</button>
+                                </form>
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% if current_user.is_admin and not match.is_completed %}
+                        <form action="{{ url_for('main.match_unassign', match_id=match.id, assignment_id=a.id) }}"
+                            method="POST" style="display:inline;">
+                            <button type="submit" class="btn-delete" title="Quitar">🗑️</button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </li>
+                {% endfor %}
+            </ul>
+            {% else %}
+            <p style="color:var(--text-light);font-size:0.84rem;padding:24px 0;text-align:center;">Sin jugadores</p>
+            {% endif %}
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+    .section-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 4px;
+    }
+
+    .form-select {
+        padding: 10px 14px;
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+        background: #fff;
+        font-size: 0.88rem;
+        color: var(--text-dark);
+    }
+
+    .match-header {
+        padding: 26px 28px;
+    }
+
+    .scoreboard {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        padding: 14px 0 6px;
+        width: 100%;
+    }
+
+    .scoreboard-team {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        min-width: 90px;
+    }
+
+    .scoreboard-team-right {
+        justify-content: flex-end;
+    }
+
+    .scoreboard-team-name {
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--text-dark);
+    }
+
+    .scoreboard-score {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--font-display);
+        font-size: 2.4rem;
+        color: var(--text-dark);
+        min-width: 100px;
+        justify-content: center;
+    }
+
+    .scoreboard-vs {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-light);
+        letter-spacing: 2px;
+        min-width: 100px;
+        text-align: center;
+    }
+
+    .score-sep {
+        color: var(--text-light);
+        font-size: 1.6rem;
+    }
+
+    .status-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 4px 12px;
+        border-radius: 99px;
+    }
+
+    .status-done {
+        background: rgba(16, 185, 129, 0.09);
+        color: var(--green-dark);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-pending {
+        background: rgba(245, 158, 11, 0.09);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.22);
+    }
+
+    .teams-cols {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 16px;
+    }
+
+    .team-col {
+        padding: 20px;
+    }
+
+    .team-col-header {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding-bottom: 14px;
+        margin-bottom: 6px;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .team-count {
+        margin-left: auto;
+        font-size: 0.72rem;
+        font-weight: 700;
+        color: var(--text-light);
+        background: rgba(148, 163, 184, 0.1);
+        border: 1px solid var(--border);
+        border-radius: 99px;
+        padding: 2px 8px;
+    }
+
+    .assignment-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .assignment-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 6px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.07);
+    }
+
+    .assignment-row:last-child {
+        border-bottom: none;
+    }
+
+    .assignment-name {
+        flex: 1;
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        text-decoration: none;
+        transition: color .15s;
+    }
+
+    .assignment-name:hover {
+        color: var(--blue);
+    }
+
+    .assignment-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* ── Controles de estadísticas ── */
+    .assignment-stats-edit {
+        display: flex;
+        gap: 10px;
+    }
+
+    .stat-ctrl {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        background: rgba(148, 163, 184, 0.06);
+        padding: 2px 4px;
+        border-radius: 6px;
+        border: 1px solid var(--border);
+    }
+
+    .stat-label {
+        font-size: 0.65rem;
+        font-weight: 800;
+        color: var(--text-light);
+        margin-right: 2px;
+    }
+
+    .stat-val {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-dark);
+        min-width: 14px;
+        text-align: center;
+    }
+
+    .btn-stat-plus,
+    .btn-stat-minus {
+        background: #fff;
+        border: 1px solid var(--border);
+        border-radius: 4px;
+        width: 18px;
+        height: 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all .15s;
+    }
+
+    .btn-stat-plus:hover {
+        background: var(--blue);
+        color: #fff;
+        border-color: var(--blue);
+    }
+
+    .btn-stat-minus:hover {
+        background: #fecaca;
+        color: #dc2626;
+        border-color: #fecaca;
+    }
+
+    .btn-delete {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 4px;
+        font-size: 0.9rem;
+        opacity: 0.4;
+        transition: opacity .2s, transform .2s;
+    }
+
+    .btn-delete:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+
+    .team-dot {
+        border-radius: 50%;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .team-dot-blue {
+        background: var(--blue);
+    }
+
+    .team-dot-red {
+        background: var(--red);
+    }
+
+    @media (max-width: 560px) {
+        .teams-cols {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}

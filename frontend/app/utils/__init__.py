@@ -40,6 +40,16 @@ def api_post(url, data, handle_401=True):
         return None, 503
 
 
+def api_put(url, data, handle_401=True):
+    try:
+        r = requests.put(url, json=data, headers=_headers(), timeout=8)
+        if handle_401 and r.status_code == 401:
+            return None, 401
+        return r, r.status_code
+    except requests.RequestException:
+        return None, 503
+
+
 def api_delete(url):
     try:
         r = requests.delete(url, headers=_headers(), timeout=8)

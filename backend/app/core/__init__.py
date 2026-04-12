@@ -70,16 +70,19 @@ def create_app(config_class=None):
         from ..models.player import Player
         from ..models.match import Match
         from ..models.match_assignment import MatchAssignment
+        from ..models.push_subscription import PushSubscription
         db.create_all()
 
     # Register namespaces
     from ..routes.auth import ns as auth_ns
     from ..routes.players import ns as players_ns
     from ..routes.matches import ns as matches_ns
+    from ..routes.push import ns as push_ns
 
     api.add_namespace(auth_ns)
     api.add_namespace(players_ns)
     api.add_namespace(matches_ns)
+    api.add_namespace(push_ns)
     api.init_app(app)
 
     @app.errorhandler(429)

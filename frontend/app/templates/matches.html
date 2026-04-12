@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Partidos — UGL{% endblock %}
+
+{# ── Macro fila de partido ─────────────────────────────────────────────── #}
+{% macro match_row(match) %}
+<a href="{{ url_for('main.match_detail', match_id=match.id) }}" class="match-row card">
+
+    {# Fecha #}
+    <div class="match-date-col">
+        <p class="match-day">{{ match.date[8:10] }}</p>
+        <p class="match-month">{{ match.date[5:7] | month_name }}</p>
+    </div>
+
+    <div class="match-divider-v"></div>
+
+    {# Equipos y marcador #}
+    <div class="match-center">
+        <div class="match-team match-team-a">
+            <span class="team-dot team-dot-blue"></span>
+            <span>PDA</span>
+        </div>
+
+        {% if match.is_completed %}
+        <div class="match-score">
+            <span>{{ match.team_a_goals }}</span>
+            <span class="score-sep">—</span>
+            <span>{{ match.team_b_goals }}</span>
+        </div>
+        {% else %}
+        <div class="match-score-pending">VS</div>
+        {% endif %}
+
+        <div class="match-team match-team-b">
+            <span>ATG</span>
+            <span class="team-dot team-dot-red"></span>
+        </div>
+    </div>
+
+    {# Estado #}
+    <div class="match-status-col">
+        {% if match.is_completed %}
+        <span class="status-badge status-done">Finalizado</span>
+        {% else %}
+        <span class="status-badge status-pending">Pendiente</span>
+        {% endif %}
+    </div>
+
+    <span class="match-arrow">→</span>
+</a>
+{% endmacro %}
+
+{% block content %}
+<div class="dash-wrapper">
+
+    <div class="dash-page-header anim-slide-up">
+        <p class="eyebrow">Historial</p>
+        <h2>Partidos</h2>
+        <p>{{ matches | length }} jornada{% if matches | length != 1 %}s{% endif %} registrada{% if matches | length !=
+            1 %}s{% endif %}.</p>
+    </div>
+
+    {% if matches %}
+
+    {# ── Pendientes ───────────────────────────────────────────────────── #}
+    {% set pending = matches | rejectattr("is_completed") | list %}
+    {% if pending %}
+    <div class="anim-slide-up anim-delay-1" style="margin-bottom: 28px;">
+        <p class="section-label">Próximos</p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for match in pending | reverse %}
+            {{ match_row(match) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Completados ──────────────────────────────────────────────────── #}
+    {% set completed = matches | selectattr("is_completed") | list %}
+    {% if completed %}
+    <div class="anim-slide-up anim-delay-2">
+        <p class="section-label">Jugados</p>
+        <div style="display: flex; flex-direction: column; gap: 10px;">
+            {% for match in completed %}
+            {{ match_row(match) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="card" style="padding: 48px; text-align: center;">
+        <p style="font-size: 2rem; margin-bottom: 12px;">🏟️</p>
+        <p style="font-weight: 600; color: var(--text-mid);">No hay partidos registrados aún.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+
+<style>
+    .section-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 12px;
+    }
+
+    /* ── Fila de partido ── */
+    .match-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 16px 22px;
+        text-decoration: none;
+        transition: transform .2s var(--ease-spring), box-shadow .2s;
+        cursor: pointer;
+    }
+
+    .match-row:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 36px rgba(20, 40, 80, 0.12);
+    }
+
+    /* Fecha */
+    .match-date-col {
+        text-align: center;
+        min-width: 36px;
+        flex-shrink: 0;
+    }
+
+    .match-day {
+        font-family: var(--font-display);
+        font-size: 1.4rem;
+        line-height: 1;
+        color: var(--text-dark);
+    }
+
+    .match-month {
+        font-size: 0.7rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Divisor vertical */
+    .match-divider-v {
+        width: 1px;
+        height: 36px;
+        background: var(--border);
+        flex-shrink: 0;
+    }
+
+    /* Centro */
+    .match-center {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 16px;
+        min-width: 0;
+    }
+
+    .match-team {
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        font-size: 0.86rem;
+        font-weight: 600;
+        color: var(--text-mid);
+        min-width: 72px;
+    }
+
+    .match-team-a {
+        justify-content: flex-end;
+    }
+
+    .match-team-b {
+        justify-content: flex-start;
+    }
+
+    .team-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .team-dot-blue {
+        background: var(--blue);
+    }
+
+    .team-dot-red {
+        background: var(--red);
+    }
+
+    .match-score {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--font-display);
+        font-size: 1.3rem;
+        color: var(--text-dark);
+        min-width: 64px;
+        justify-content: center;
+    }
+
+    .score-sep {
+        color: var(--text-light);
+        font-size: 1rem;
+    }
+
+    .match-score-pending {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--text-light);
+        letter-spacing: 1px;
+        min-width: 64px;
+        text-align: center;
+    }
+
+    /* Estado */
+    .match-status-col {
+        flex-shrink: 0;
+    }
+
+    .status-badge {
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 99px;
+        white-space: nowrap;
+    }
+
+    .status-done {
+        background: rgba(16, 185, 129, 0.09);
+        color: var(--green-dark);
+        border: 1px solid rgba(16, 185, 129, 0.2);
+    }
+
+    .status-pending {
+        background: rgba(245, 158, 11, 0.09);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.22);
+    }
+
+    /* Flecha */
+    .match-arrow {
+        font-size: 1rem;
+        color: var(--text-light);
+        flex-shrink: 0;
+        transition: color .18s, transform .18s;
+    }
+
+    .match-row:hover .match-arrow {
+        color: var(--blue);
+        transform: translateX(3px);
+    }
+
+    @media (max-width: 520px) {
+        .match-status-col {
+            display: none;
+        }
+
+        .match-team {
+            min-width: 56px;
+            font-size: 0.8rem;
+        }
+    }
+</style>
+{% endblock %}

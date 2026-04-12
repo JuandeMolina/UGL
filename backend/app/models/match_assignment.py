@@ -16,7 +16,7 @@ class MatchAssignment(db.Model):
     id: int = db.Column(db.Integer, primary_key=True)
     match_id: int = db.Column(db.Integer, db.ForeignKey("match.id"), nullable=False)
     player_id: int = db.Column(db.Integer, db.ForeignKey("player.id"), nullable=False)
-    team: str = db.Column(db.String(1), nullable=False)  # 'A' o 'B'
+    team: str = db.Column(db.String(3), nullable=False)  # 'PDA' or 'ATG'
     goals: int = db.Column(db.Integer, default=0)
     assists: int = db.Column(db.Integer, default=0)
 

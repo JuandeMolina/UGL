@@ -11,5 +11,6 @@ from .user import User
 from .player import Player
 from .match import Match
 from .match_assignment import MatchAssignment
+from .push_subscription import PushSubscription
 
-__all__ = ["User", "Player", "Match", "MatchAssignment"]
+__all__ = ["User", "Player", "Match", "MatchAssignment", "PushSubscription"]

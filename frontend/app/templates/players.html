@@ -1,0 +1,183 @@
+{% extends "base.html" %}
+{% block title %}Jugadores — UGL{% endblock %}
+
+{# ── Macro tarjeta de jugador ─────────────────────────────────────────── #}
+{% macro player_card(player) %}
+<a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="player-card card">
+    <div class="player-avatar">
+        {% if player.photo_url %}
+        <img src="{{ player.photo_url }}" alt="{{ player.name }}" class="player-photo">
+        {% else %}
+        <span class="player-jersey-number">{{ player.jersey_number }}</span>
+        {% endif %}
+    </div>
+    <div class="player-info">
+        <p class="player-name">{{ player.name }}</p>
+        <div style="display: flex; gap: 8px; align-items: center; margin-top: 4px;">
+            {% if player.is_goalkeeper %}
+            <span class="player-badge player-badge-gk">🧤 Portero</span>
+            {% else %}
+            <span class="player-badge player-badge-field">⚽ Campo</span>
+            {% endif %}
+            <span style="font-size: 0.75rem; font-weight: 700; color: var(--text-mid);">
+                {{ player.stats.goals }} G
+            </span>
+            <span style="font-size: 0.75rem; font-weight: 700; color: var(--blue);">
+                {{ player.stats.wins }} V
+            </span>
+        </div>
+    </div>
+    <span class="player-arrow">→</span>
+</a>
+{% endmacro %}
+
+{% block content %}
+<div class="dash-wrapper">
+
+    <div class="dash-page-header anim-slide-up">
+        <p class="eyebrow">Plantilla</p>
+        <h2>Jugadores</h2>
+        <p>{{ players | length }} integrantes de la liga.</p>
+    </div>
+
+    {# ── Porteros ─────────────────────────────────────────────────────── #}
+    {% set goalkeepers = players | selectattr("is_goalkeeper") | list %}
+    {% if goalkeepers %}
+    <div class="anim-slide-up anim-delay-1" style="margin-bottom: 32px;">
+        <p class="section-label">Porteros</p>
+        <div class="players-grid">
+            {% for player in goalkeepers %}
+            {{ player_card(player) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {# ── Jugadores de campo ───────────────────────────────────────────── #}
+    {% set outfield = players | rejectattr("is_goalkeeper") | list %}
+    {% if outfield %}
+    <div class="anim-slide-up anim-delay-2">
+        <p class="section-label">Jugadores de campo</p>
+        <div class="players-grid">
+            {% for player in outfield %}
+            {{ player_card(player) }}
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if not players %}
+    <div class="card" style="padding: 48px; text-align: center;">
+        <p style="font-size: 2rem; margin-bottom: 12px;">👥</p>
+        <p style="font-weight: 600; color: var(--text-mid);">No hay jugadores registrados aún.</p>
+    </div>
+    {% endif %}
+
+</div>
+
+
+
+<style>
+    .section-label {
+        font-size: 0.78rem;
+        font-weight: 700;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 0.7px;
+        margin-bottom: 12px;
+    }
+
+    .players-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+        gap: 14px;
+    }
+
+    .player-card {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px 18px;
+        text-decoration: none;
+        transition: transform .2s var(--ease-spring), box-shadow .2s;
+        cursor: pointer;
+    }
+
+    .player-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 12px 40px rgba(20, 40, 80, 0.13);
+    }
+
+    .player-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        overflow: hidden;
+        background: var(--grad);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .player-photo {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .player-jersey-number {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #fff;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .player-info {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .player-name {
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: var(--text-dark);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        margin-bottom: 4px;
+    }
+
+    .player-badge {
+        font-size: 0.72rem;
+        font-weight: 600;
+        padding: 2px 8px;
+        border-radius: 99px;
+    }
+
+    .player-badge-gk {
+        background: rgba(245, 158, 11, 0.1);
+        color: #b45309;
+        border: 1px solid rgba(245, 158, 11, 0.25);
+    }
+
+    .player-badge-field {
+        background: rgba(59, 130, 246, 0.08);
+        color: var(--blue);
+        border: 1px solid rgba(59, 130, 246, 0.15);
+    }
+
+    .player-arrow {
+        font-size: 1rem;
+        color: var(--text-light);
+        flex-shrink: 0;
+        transition: color .18s, transform .18s;
+    }
+
+    .player-card:hover .player-arrow {
+        color: var(--blue);
+        transform: translateX(3px);
+    }
+</style>
+{% endblock %}

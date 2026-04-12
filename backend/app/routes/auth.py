@@ -44,6 +44,7 @@ class Login(Resource):
                 "id": user.id,
                 "email": user.email,
                 "player_id": user.player_id,
+                "is_admin": user.is_admin,
             },
         }, 200
 
@@ -68,5 +69,6 @@ class Me(Resource):
             "id": user.id,
             "email": user.email,
             "player_id": user.player_id,
+            "is_admin": user.is_admin,
         }, 200
 

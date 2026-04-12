@@ -26,17 +26,21 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = False
     TESTING = False
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(hours=24)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=365)
+    
+    # VAPID KEYS for Web Push
+    VAPID_PUBLIC_KEY = os.environ.get("VAPID_PUBLIC_KEY", "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEp1ek28wEoWjKLBhxgfZ60z/+c9+yJm6xP1ltyx54TnAPqsqKgKMKXzF08C49etwsmEFA1clMwUQkbpM4c+H2jQ==")
+    VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "Pejk77SCKZNCIexIjjjZ0lhN1NfbFzFf3jUpuTAEg+ShRANCAASnV6TbzAShaMosGHGB9nrTP/5z37ImbrE/WW3LHnhOcA+qyoqAowpfMXTwLj163CyYQUDVyUzBRCRukzhz4faN") # Raw part or PEM
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=7)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=365)
 
 
 class ProductionConfig(Config):
     DEBUG = False
-    JWT_ACCESS_TOKEN_EXPIRES = timedelta(minutes=60)
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=365)
 
 
 class TestingConfig(Config):

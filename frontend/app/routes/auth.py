@@ -39,6 +39,7 @@ def login():
 
         data = r.json()  # type: ignore
         session["jwt"] = data["access_token"]
+        session.permanent = True
         user = User.from_dict(data["user"])
         login_user(user, remember=True)
         return redirect(url_for("main.dashboard"))
