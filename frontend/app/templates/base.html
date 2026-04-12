@@ -7,6 +7,9 @@
     <title>{% block title %}UGL — Liga de Fútbol Sala{% endblock %}</title>
     <meta name="description"
         content="{% block meta_description %}Gestión privada de la liga de fútbol sala.{% endblock %}">
+
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 
