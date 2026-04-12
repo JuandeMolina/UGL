@@ -11,6 +11,23 @@
         <p>Consulta el próximo partido y los rankings de la liga.</p>
     </div>
 
+    <!-- Banner de Notificaciones -->
+    <div id="push-banner" class="card anim-slide-up"
+        style="display: none; margin-bottom: 24px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); border: none;">
+        <div style="display: flex; align-items: center; gap: 16px; padding: 20px;">
+            <div style="font-size: 24px;">🔔</div>
+            <div style="flex: 1;">
+                <p style="color: white; font-weight: 700; margin-bottom: 2px;">¿Quieres enterarte de los goles?</p>
+                <p style="color: rgba(255,255,255,0.8); font-size: 0.82rem;">Activa las notificaciones para recibir
+                    alertas en vivo.</p>
+            </div>
+            <button onclick="subscribeUser()" class="btn btn-sm"
+                style="background: white; color: #2563eb; border: none;">Activar</button>
+            <button onclick="document.getElementById('push-banner').style.display='none'"
+                style="background: none; border: none; color: white; cursor: pointer; opacity: 0.6;">✕</button>
+        </div>
+    </div>
+
     {# ── Próximo partido ──────────────────────────────────────────────── #}
     <div class="anim-slide-up anim-delay-1" style="margin-bottom: 32px;">
         <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-light);
@@ -41,121 +58,124 @@
 
                 <div style="display: flex; align-items: center; gap: 8px; justify-content: flex-end; flex-shrink: 0;">
                     {% if next_match.playing_now %}
-                    <span class="badge badge-blue" style="background: rgba(59, 130, 246, 0.09); color: var(--blue); border-color: rgba(59, 130, 246, 0.22);">En juego</span>
+                    <span class="badge badge-blue"
+                        style="background: rgba(59, 130, 246, 0.09); color: var(--blue); border-color: rgba(59, 130, 246, 0.22);">En
+                        juego</span>
                     {% else %}
-                    <span class="badge badge-blue" style="background: rgba(245, 158, 11, 0.09); color: #b45309; border-color: rgba(245, 158, 11, 0.22);">Pendiente</span>
+                    <span class="badge badge-blue"
+                        style="background: rgba(245, 158, 11, 0.09); color: #b45309; border-color: rgba(245, 158, 11, 0.22);">Pendiente</span>
                     {% endif %}
                     <span style="font-size: 1.2rem; color: var(--blue);">→</span>
                 </div>
             </div>
         </a>
         {% else %}
-    <div class="card" style="padding: 36px 26px; text-align: center;">
-        <p style="font-size: 2.4rem; margin-bottom: 12px;">📅</p>
-        <p style="font-weight: 600; color: var(--text-mid); margin-bottom: 5px; font-size: 1rem;">
-            Sin partidos próximamente
-        </p>
-        <p style="font-size: 0.85rem; color: var(--text-light);">
-            No hay jornadas programadas de momento. ¡Volved cuando sepáis la fecha!
-        </p>
-    </div>
-    {% endif %}
-</div>
-
-{# ── Rankings (scroll horizontal) ────────────────────────────────── #}
-<div class="anim-slide-up anim-delay-2">
-    <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-light);
-                  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px;">
-        Rankings de la temporada
-    </p>
-
-    <div class="tops-scroll">
-
-        {# Macro para las medallas #}
-        {% macro medal(rank) %}
-        {% if rank == 1 %}🥇
-        {% elif rank == 2 %}🥈
-        {% elif rank == 3 %}🥉
-        {% else %}<span
-            style="font-size:0.9rem;color:var(--text-light);font-weight:700;min-width:20px;text-align:center;">{{
-            rank }}</span>
+        <div class="card" style="padding: 36px 26px; text-align: center;">
+            <p style="font-size: 2.4rem; margin-bottom: 12px;">📅</p>
+            <p style="font-weight: 600; color: var(--text-mid); margin-bottom: 5px; font-size: 1rem;">
+                Sin partidos próximamente
+            </p>
+            <p style="font-size: 0.85rem; color: var(--text-light);">
+                No hay jornadas programadas de momento. ¡Volved cuando sepáis la fecha!
+            </p>
+        </div>
         {% endif %}
-        {% endmacro %}
+    </div>
 
-        {# ── Tarjeta Top Goleadores ── #}
-        <div class="card top-card">
-            <div class="top-card-header">
-                <div class="stat-icon stat-icon-blue" style="font-size: 20px;">⚽</div>
-                <h3 style="font-size: 1rem;">Top Goleadores</h3>
+    {# ── Rankings (scroll horizontal) ────────────────────────────────── #}
+    <div class="anim-slide-up anim-delay-2">
+        <p style="font-size: 0.78rem; font-weight: 700; color: var(--text-light);
+                  text-transform: uppercase; letter-spacing: 0.7px; margin-bottom: 12px;">
+            Rankings de la temporada
+        </p>
+
+        <div class="tops-scroll">
+
+            {# Macro para las medallas #}
+            {% macro medal(rank) %}
+            {% if rank == 1 %}🥇
+            {% elif rank == 2 %}🥈
+            {% elif rank == 3 %}🥉
+            {% else %}<span
+                style="font-size:0.9rem;color:var(--text-light);font-weight:700;min-width:20px;text-align:center;">{{
+                rank }}</span>
+            {% endif %}
+            {% endmacro %}
+
+            {# ── Tarjeta Top Goleadores ── #}
+            <div class="card top-card">
+                <div class="top-card-header">
+                    <div class="stat-icon stat-icon-blue" style="font-size: 20px;">⚽</div>
+                    <h3 style="font-size: 1rem;">Top Goleadores</h3>
+                </div>
+
+                {% if top_scorers %}
+                <ul class="top-list">
+                    {% for rank, player in top_scorers %}
+                    <li>
+                        <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                            <span class="top-medal">{{ medal(rank) }}</span>
+                            <span class="top-name">{{ player.name }}</span>
+                            <span class="top-stat top-stat-blue">{{ player.goals }} ⚽</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="top-empty">Sin datos aún</p>
+                {% endif %}
             </div>
 
-            {% if top_scorers %}
-            <ul class="top-list">
-                {% for rank, player in top_scorers %}
-                <li>
-                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
-                        <span class="top-medal">{{ medal(rank) }}</span>
-                        <span class="top-name">{{ player.name }}</span>
-                        <span class="top-stat top-stat-blue">{{ player.goals }} ⚽</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="top-empty">Sin datos aún</p>
-            {% endif %}
-        </div>
+            {# ── Tarjeta Top Asistentes ── #}
+            <div class="card top-card">
+                <div class="top-card-header">
+                    <div class="stat-icon stat-icon-green" style="font-size: 20px;">🎯</div>
+                    <h3 style="font-size: 1rem;">Top Asistentes</h3>
+                </div>
 
-        {# ── Tarjeta Top Asistentes ── #}
-        <div class="card top-card">
-            <div class="top-card-header">
-                <div class="stat-icon stat-icon-green" style="font-size: 20px;">🎯</div>
-                <h3 style="font-size: 1rem;">Top Asistentes</h3>
+                {% if top_assisters %}
+                <ul class="top-list">
+                    {% for rank, player in top_assisters %}
+                    <li>
+                        <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                            <span class="top-medal">{{ medal(rank) }}</span>
+                            <span class="top-name">{{ player.name }}</span>
+                            <span class="top-stat top-stat-green">{{ player.assists }} 🎯</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="top-empty">Sin datos aún</p>
+                {% endif %}
             </div>
 
-            {% if top_assisters %}
-            <ul class="top-list">
-                {% for rank, player in top_assisters %}
-                <li>
-                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
-                        <span class="top-medal">{{ medal(rank) }}</span>
-                        <span class="top-name">{{ player.name }}</span>
-                        <span class="top-stat top-stat-green">{{ player.assists }} 🎯</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="top-empty">Sin datos aún</p>
-            {% endif %}
-        </div>
+            {# ── Tarjeta Top Victorias ── #}
+            <div class="card top-card">
+                <div class="top-card-header">
+                    <div class="stat-icon stat-icon-amber" style="font-size: 20px;">🏆</div>
+                    <h3 style="font-size: 1rem;">Top Victorias</h3>
+                </div>
 
-        {# ── Tarjeta Top Victorias ── #}
-        <div class="card top-card">
-            <div class="top-card-header">
-                <div class="stat-icon stat-icon-amber" style="font-size: 20px;">🏆</div>
-                <h3 style="font-size: 1rem;">Top Victorias</h3>
+                {% if top_winners %}
+                <ul class="top-list">
+                    {% for rank, player in top_winners %}
+                    <li>
+                        <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
+                            <span class="top-medal">{{ medal(rank) }}</span>
+                            <span class="top-name">{{ player.name }}</span>
+                            <span class="top-stat top-stat-amber">{{ player.wins }} 🏆</span>
+                        </a>
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p class="top-empty">Sin datos aún</p>
+                {% endif %}
             </div>
 
-            {% if top_winners %}
-            <ul class="top-list">
-                {% for rank, player in top_winners %}
-                <li>
-                    <a href="{{ url_for('main.player_detail', player_id=player.id) }}" class="top-list-row">
-                        <span class="top-medal">{{ medal(rank) }}</span>
-                        <span class="top-name">{{ player.name }}</span>
-                        <span class="top-stat top-stat-amber">{{ player.wins }} 🏆</span>
-                    </a>
-                </li>
-                {% endfor %}
-            </ul>
-            {% else %}
-            <p class="top-empty">Sin datos aún</p>
-            {% endif %}
-        </div>
-
-    </div>{# /tops-scroll #}
-</div>
+        </div>{# /tops-scroll #}
+    </div>
 
 </div>
 

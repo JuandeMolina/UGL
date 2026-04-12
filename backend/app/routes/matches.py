@@ -100,6 +100,18 @@ class MatchList(Resource):
         )
         db.session.add(match)
         db.session.commit()
+
+
+        try:
+            from ..utils.push_utils import notify_all_users
+            notify_all_users(
+                "⚽ ¡Nueva Jornada disponible!", 
+                f"Se ha creado la Jornada {match.matchday} ({match.date.strftime('%d/%m')}). ¡Entra para confirmar asistencia!",
+                f"/matches/{match.id}"
+            )
+        except Exception as e:
+            print(f"Error enviando notificaciones: {e}")
+
         return {"id": match.id, "date": match.date.isoformat()}, 201
 
 
@@ -272,15 +284,13 @@ class MatchAssignmentDetail(Resource):
             new_goals = data["goals"]
             assignment.goals = new_goals
             
-            # Recalcular marcador del partido de forma robusta
             sync_match_goals(assignment.match)
 
-            # Trigger notification if goals increased
             if new_goals > old_goals:
                 from ..utils.push_utils import notify_all_users
                 notify_all_users(
-                    "¡GOL!", 
-                    f"{assignment.player.name} ha marcado para {assignment.team}",
+                    "¡GOOOL!", 
+                    f"{assignment.player.name} ha marcado para {assignment.team}. PDA {assignment.match.pda_goals} - {assignment.match.atg_goals} ATG",
                     f"/matches/{match_id}"
                 )
         if "assists" in data:

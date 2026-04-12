@@ -117,29 +117,73 @@
     </div>
     {% if current_user.is_authenticated %}
     <script>
+        // 1. Definimos las constantes
         const VAPID_PUBLIC_KEY = "{{ VAPID_PUBLIC_KEY }}";
         const API_BASE_URL = "{{ API_BASE }}";
 
+        // 2. FUNCIÓN DE AYUDA (La que te faltaba)
+        // Esta función convierte la clave VAPID de texto a un formato que el navegador entiende
         function urlBase64ToUint8Array(base64String) {
             const padding = '='.repeat((4 - base64String.length % 4) % 4);
             const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
             const rawData = window.atob(base64);
             const outputArray = new Uint8Array(rawData.length);
-            for (let i = 0; i < rawData.length; ++i) { outputArray[i] = rawData.charCodeAt(i); }
+            for (let i = 0; i < rawData.length; ++i) {
+                outputArray[i] = rawData.charCodeAt(i);
+            }
             return outputArray;
         }
 
-        const PUSH_SUPPORTED = ('serviceWorker' in navigator && 'PushManager' in window);
+        // 3. Función para suscribir al usuario
+        async function subscribeUser() {
+            console.log("Intentando suscribir...");
+            if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                alert("Tu navegador no soporta notificaciones.");
+                return;
+            }
 
-        if (PUSH_SUPPORTED) {
-            navigator.serviceWorker.register('/sw.js')
-                .then(function (swReg) {
-                    console.log('Service Worker is registered', swReg);
-                    updateSubscriptionUI();
-                })
-                .catch(function (error) {
-                    console.error('Service Worker Error', error);
+            try {
+                const registration = await navigator.serviceWorker.ready;
+
+                // Aquí usamos la función que daba error
+                const subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
                 });
+
+                const response = await fetch(`${API_BASE_URL}/push/subscribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
+                    },
+                    body: JSON.stringify(subscription)
+                });
+
+                if (response.ok) {
+                    alert("¡Notificaciones activadas!");
+                    document.getElementById('push-banner').style.display = 'none';
+                } else {
+                    console.error("Error en el servidor al guardar la suscripción");
+                }
+            } catch (err) {
+                console.error('Error al suscribir:', err);
+                alert("Hubo un error al activar las notificaciones.");
+            }
+        }
+
+        // 4. Lógica de inicio: registrar SW y comprobar si ya está suscrito
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').then(async (reg) => {
+                console.log('Service Worker registrado');
+
+                // Si ya está suscrito, no mostramos el banner
+                const sub = await reg.pushManager.getSubscription();
+                if (!sub && Notification.permission !== 'denied') {
+                    const banner = document.getElementById('push-banner');
+                    if (banner) banner.style.display = 'block';
+                }
+            });
         }
     </script>
     {% endif %}

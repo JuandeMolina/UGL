@@ -32,10 +32,11 @@ class Subscribe(Resource):
     @ns.expect(subscription_model)
     def post(self):
         """Suscribe al usuario actual a notificaciones push."""
-        current_user_email = get_jwt_identity()
-        user = User.query.filter_by(email=current_user_email).first()
+        user_id = get_jwt_identity() # Esto devuelve el ID (ej: "1")
+        user = User.query.get(int(user_id)) # Buscamos por ID, no por email
+
         if not user:
-            return {"message": "Usuario no encontrado."}, 404
+            return {"message": "Usuario no encontrado en la DB."}, 404
 
         data = ns.payload
         endpoint = data["endpoint"]
