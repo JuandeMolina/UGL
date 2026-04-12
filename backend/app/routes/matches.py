@@ -8,9 +8,9 @@ License: MIT
 """
 
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..models import Match, MatchAssignment, Player
+from ..models import Match, MatchAssignment, Player, User, MatchConfirmation
 from ..core import db
 
 ns = Namespace("matches", description="Partidos")
@@ -40,6 +40,13 @@ stats_model = ns.model(
     {
         "goals": fields.Integer(description="Goles marcados"),
         "assists": fields.Integer(description="Asistencias realizadas"),
+    },
+)
+
+confirmation_model = ns.model(
+    "Confirmation",
+    {
+        "will_attend": fields.Boolean(required=True, description="¿Asistirá al partido?"),
     },
 )
 
@@ -100,7 +107,7 @@ class MatchList(Resource):
 class MatchDetail(Resource):
     @jwt_required()
     def get(self, match_id):
-        """Devuelve el detalle de un partido con sus asignaciones."""
+        """Devuelve el detalle de un partido con sus asignaciones, confirmaciones y lista de espera."""
         match = Match.query.get_or_404(match_id)
         
         assignments = (
@@ -109,6 +116,33 @@ class MatchDetail(Resource):
             .filter(MatchAssignment.match_id == match_id)
             .all()
         )
+
+        # IDs de jugadores ya asignados a equipos
+        assigned_player_ids = {a.MatchAssignment.player_id for a in assignments}
+        
+        # Obtener confirmaciones de asistencia
+        confirmations = MatchConfirmation.query.filter_by(match_id=match_id, will_attend=True).all()
+        
+        # Lista de espera: jugadores que confirmaron asistencia pero NO están asignados
+        waiting_list = []
+        for conf in confirmations:
+            if conf.player_id not in assigned_player_ids:
+                waiting_list.append({
+                    "player_id": conf.player_id,
+                    "player_name": conf.player.name
+                })
+        
+        # Confirmación del usuario actual
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        user_confirmation = None
+        if user and user.player_id:
+            conf = MatchConfirmation.query.filter_by(
+                match_id=match_id,
+                player_id=user.player_id
+            ).first()
+            if conf:
+                user_confirmation = conf.will_attend
 
         return {
             "id": match.id,
@@ -135,6 +169,8 @@ class MatchDetail(Resource):
                 }
                 for a in assignments
             ],
+            "waiting_list": waiting_list,
+            "user_confirmation": user_confirmation,
         }, 200
 
     @jwt_required()
@@ -164,6 +200,45 @@ class MatchDetail(Resource):
             
         db.session.commit()
         return {"message": "Partido actualizado con éxito."}, 200
+
+
+@ns.route("/<int:match_id>/confirm")
+class MatchConfirmationResource(Resource):
+    @jwt_required()
+    @ns.expect(confirmation_model)
+    def post(self, match_id):
+        """Confirmar o cancelar asistencia al partido."""
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user or not user.player_id:
+            return {"message": "Usuario sin jugador asociado."}, 400
+            
+        data = ns.payload or {}
+        will_attend = data.get("will_attend", False)
+        
+        # Buscar confirmación existente
+        confirmation = MatchConfirmation.query.filter_by(
+            match_id=match_id,
+            player_id=user.player_id
+        ).first()
+        
+        if confirmation:
+            confirmation.will_attend = will_attend
+        else:
+            confirmation = MatchConfirmation(
+                match_id=match_id,
+                player_id=user.player_id,
+                will_attend=will_attend
+            )
+            db.session.add(confirmation)
+        
+        db.session.commit()
+        
+        return {
+            "message": "Asistencia actualizada.",
+            "will_attend": will_attend
+        }, 200
 
 
 @ns.route("/<int:match_id>/assignments")

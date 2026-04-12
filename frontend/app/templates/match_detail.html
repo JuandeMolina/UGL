@@ -148,9 +148,51 @@
 
     </div>
 
+    {# ── Lista de Espera y Confirmación de Asistencia ─────────────────── #}
+    {% if not match.is_completed %}
+    <div class="card anim-slide-up anim-delay-2" style="margin-top: 20px; padding: 22px;">
+        {# Formulario de confirmación #}
+        <div style="margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid var(--border);">
+            <p class="section-label" style="margin-bottom: 12px;">¿Asistirás al partido?</p>
+            <form id="confirm-form" style="display: flex; gap: 10px;">
+                <input type="hidden" name="match_id" value="{{ match.id }}">
+                <button type="submit" name="will_attend" value="true"
+                    class="btn btn-sm {% if match.user_confirmation %}btn-active{% endif %}"
+                    style="flex: 1; {% if match.user_confirmation %}background: var(--green) !important; color: #fff !important;{% else %}background: rgba(16, 185, 129, 0.08); color: var(--green); border-color: rgba(16, 185, 129, 0.2);{% endif %}">
+                    ✅ Sí, asistiré
+                </button>
+                <button type="submit" name="will_attend" value="false"
+                    class="btn btn-sm {% if match.user_confirmation == false %}btn-active{% endif %}"
+                    style="flex: 1; {% if match.user_confirmation == false %}background: var(--red) !important; color: #fff !important;{% else %}background: rgba(239, 68, 68, 0.08); color: var(--red); border-color: rgba(239, 68, 68, 0.2);{% endif %}">
+                    No asistiré ❌
+                </button>
+            </form>
+        </div>
+
+        {# Lista de espera #}
+        {% if match.waiting_list %}
+        <div>
+            <p class="section-label" style="margin-bottom: 12px;">
+                Lista de espera ({{ match.waiting_list | length }})
+            </p>
+            <div class="waiting-list">
+                {% for player in match.waiting_list | sort(attribute='player_name') %}
+                <div class="waiting-list-item">
+                    <span class="waiting-dot"></span>
+                    <a href="{{ url_for('main.player_detail', player_id=player.player_id) }}" class="waiting-name">
+                        {{ player.player_name }}
+                    </a>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
     {# ── Panel de Gestión (Admin) ──────────────────────────────────────── #}
     {% if current_user.is_admin and not match.is_completed %}
-    <div class="card anim-slide-up anim-delay-2" style="margin-top: 20px; padding: 22px;">
+    <div class="card anim-slide-up anim-delay-3" style="margin-top: 20px; padding: 22px;">
         <p class="section-label" style="margin-bottom: 16px;">Administrar Plantillas</p>
         <form action="{{ url_for('main.match_assign', match_id=match.id) }}" method="POST"
             style="display: flex; gap: 12px; flex-wrap: wrap;">
@@ -177,7 +219,7 @@
     {% set team_pda = match.assignments | selectattr("team", "equalto", "PDA") | list %}
     {% set team_atg = match.assignments | selectattr("team", "equalto", "ATG") | list %}
 
-    <div class="teams-cols anim-slide-up anim-delay-3" style="margin-top: 20px;">
+    <div class="teams-cols anim-slide-up anim-delay-4" style="margin-top: 20px;">
 
         {# Equipo PDA #}
         <div class="card team-col">
@@ -569,10 +611,87 @@
         background: var(--red);
     }
 
+    /* ── Lista de espera ── */
+    .waiting-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .waiting-list-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: rgba(59, 130, 246, 0.04);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        border-radius: var(--radius-sm);
+        transition: background .15s;
+    }
+
+    .waiting-list-item:hover {
+        background: rgba(59, 130, 246, 0.08);
+    }
+
+    .waiting-dot {
+        width: 8px;
+        height: 8px;
+        background: var(--blue);
+        border-radius: 50%;
+        flex-shrink: 0;
+        animation: pulse 2.5s ease-in-out infinite;
+    }
+
+    .waiting-name {
+        font-size: 0.88rem;
+        font-weight: 600;
+        color: var(--text-dark);
+        text-decoration: none;
+        transition: color .15s;
+    }
+
+    .waiting-name:hover {
+        color: var(--blue);
+    }
+
+    .btn-active {
+        opacity: 1 !important;
+        font-weight: 700 !important;
+    }
+
     @media (max-width: 560px) {
         .teams-cols {
             grid-template-columns: 1fr;
         }
     }
 </style>
+
+<script>
+    // Manejar confirmación de asistencia
+    document.getElementById('confirm-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const willAttend = e.submitter.value === 'true';
+
+        try {
+            const response = await fetch('{{ API_BASE }}/matches/{{ match.id }}/confirm', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
+                },
+                body: JSON.stringify({ will_attend: willAttend })
+            });
+
+            if (response.ok) {
+                // Recargar la página para ver los cambios
+                window.location.reload();
+            } else {
+                alert('Error al confirmar asistencia. Por favor, inténtalo de nuevo.');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error de conexión. Verifica tu conexión a internet.');
+        }
+    });
+</script>
 {% endblock %}

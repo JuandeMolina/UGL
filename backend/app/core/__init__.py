@@ -71,6 +71,7 @@ def create_app(config_class=None):
         from ..models.match import Match
         from ..models.match_assignment import MatchAssignment
         from ..models.push_subscription import PushSubscription
+        from ..models.match_confirmation import MatchConfirmation
         db.create_all()
 
     # Register namespaces

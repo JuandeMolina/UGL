@@ -6,11 +6,13 @@ Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
-
+ 
 from .user import User
 from .player import Player
 from .match import Match
 from .match_assignment import MatchAssignment
 from .push_subscription import PushSubscription
-
-__all__ = ["User", "Player", "Match", "MatchAssignment", "PushSubscription"]
+from .match_confirmation import MatchConfirmation
+ 
+__all__ = ["User", "Player", "Match", "MatchAssignment", "PushSubscription", "MatchConfirmation"]
+ 
