@@ -22,9 +22,9 @@
 
         {% if match.is_completed %}
         <div class="match-score">
-            <span>{{ match.team_a_goals }}</span>
+            <span>{{ match.pda_goals }}</span>
             <span class="score-sep">—</span>
-            <span>{{ match.team_b_goals }}</span>
+            <span>{{ match.atg_goals }}</span>
         </div>
         {% else %}
         <div class="match-score-pending">VS</div>

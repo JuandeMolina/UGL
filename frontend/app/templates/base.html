@@ -32,7 +32,8 @@
         </a>
         <div class="navbar-spacer"></div>
         <ul class="navbar-nav">
-            <li><a href="{{ url_for('main.dashboard') }}" class="nav-link {% if request.path == url_for('main.dashboard') %}nav-active{% endif %}">
+            <li><a href="{{ url_for('main.dashboard') }}"
+                    class="nav-link {% if request.path == url_for('main.dashboard') %}nav-active{% endif %}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
                             fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -42,7 +43,8 @@
                     </span>
                     <span class="nav-label">Inicio</span>
                 </a></li>
-            <li><a href="{{ url_for('main.players') }}" class="nav-link {% if request.path.startswith('/players') %}nav-active{% endif %}">
+            <li><a href="{{ url_for('main.players') }}"
+                    class="nav-link {% if request.path.startswith('/players') %}nav-active{% endif %}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
                             fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -54,7 +56,8 @@
                     </span>
                     <span class="nav-label">Jugadores</span>
                 </a></li>
-            <li><a href="{{ url_for('main.matches') }}" class="nav-link {% if request.path.startswith('/matches') %}nav-active{% endif %}">
+            <li><a href="{{ url_for('main.matches') }}"
+                    class="nav-link {% if request.path.startswith('/matches') %}nav-active{% endif %}">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
                             fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -67,7 +70,9 @@
                     <span class="nav-label">Partidos</span>
                 </a></li>
             {% if current_user.is_admin %}
-            <li><a href="{{ url_for('main.admin_new_match') }}" class="nav-link nav-link-admin {% if request.path.startswith('/admin') or request.path.endswith('/edit') or request.path.endswith('/new') %}nav-active{% endif %}" title="Panel Admin">
+            <li><a href="{{ url_for('main.admin_new_match') }}"
+                    class="nav-link nav-link-admin {% if request.path.startswith('/admin') or request.path.endswith('/edit') or request.path.endswith('/new') %}nav-active{% endif %}"
+                    title="Panel Admin">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
                             fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -89,7 +94,6 @@
                 </a></li>
         </ul>
         <div class="navbar-user-actions" style="margin-left: 10px;">
-            <span class="nav-username">{{ current_user.email }}</span>
             <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm nav-logout" title="Salir">
                 <span class="nav-icon">
                     <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2" fill="none"
