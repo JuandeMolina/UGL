@@ -1718,9 +1718,14 @@ tr.self-row .row-actions button {
     /* Navbar Mobile */
     .navbar {
         padding: 0 16px;
+        top: auto;
+        bottom: 0;
+        border-top: 1px solid rgba(255, 255, 255, 0.85);
+        border-bottom: none;
+        box-shadow: 0 -1px 20px rgba(20, 40, 80, 0.06);
     }
-    .navbar-name {
-        font-size: 0.9rem;
+    .navbar-brand {
+        display: none;
     }
     .nav-label {
         display: none;
@@ -1742,10 +1747,10 @@ tr.self-row .row-actions button {
     }
     .navbar-nav {
         flex: 1;
-        justify-content: space-between;
+        justify-content: space-around;
         gap: 0;
         margin: 0;
-        padding: 0 10px;
+        padding: 0;
     }
 
     .navbar-user-actions {
@@ -1771,8 +1776,9 @@ tr.self-row .row-actions button {
         gap: 16px;
     }
 
-    .dash-wrapper {
-        padding: 80px 16px 40px !important;
+    .dash-wrapper, .admin-wrapper, .index-wrapper {
+        padding-top: 24px !important;
+        padding-bottom: 80px !important;
     }
 
     .card {

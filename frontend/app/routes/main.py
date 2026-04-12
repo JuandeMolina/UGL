@@ -19,6 +19,12 @@ def index():
     return redirect(url_for("auth.login"))
 
 
+@main.route("/sw.js")
+def service_worker():
+    from flask import current_app, send_from_directory
+    return send_from_directory(current_app.static_folder, "sw.js")
+
+
 @main.route("/dashboard")
 @login_required
 def dashboard():

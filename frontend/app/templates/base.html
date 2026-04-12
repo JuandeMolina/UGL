@@ -82,16 +82,6 @@
                     <span class="nav-label">Admin</span>
                 </a></li>
             {% endif %}
-            <li><a href="javascript:void(0)" id="push-toggle" class="nav-link" title="Notificaciones">
-                    <span class="nav-icon">
-                        <svg id="push-icon" viewBox="0 0 24 24" width="22" height="22" stroke="currentColor"
-                            stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
-                            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
-                        </svg>
-                    </span>
-                    <span class="nav-label">Alertas</span>
-                </a></li>
         </ul>
         <div class="navbar-user-actions" style="margin-left: 10px;">
             <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost btn-sm nav-logout" title="Salir">
@@ -136,8 +126,10 @@
             return outputArray;
         }
 
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            navigator.serviceWorker.register('/static/sw.js')
+        const PUSH_SUPPORTED = ('serviceWorker' in navigator && 'PushManager' in window);
+
+        if (PUSH_SUPPORTED) {
+            navigator.serviceWorker.register('/sw.js')
                 .then(function (swReg) {
                     console.log('Service Worker is registered', swReg);
                     updateSubscriptionUI();
@@ -146,67 +138,6 @@
                     console.error('Service Worker Error', error);
                 });
         }
-
-        async function updateSubscriptionUI() {
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
-            const icon = document.getElementById('push-icon');
-            const link = document.getElementById('push-toggle');
-
-            if (subscription) {
-                icon.style.stroke = "var(--green)";
-                link.title = "Notificaciones activadas";
-            } else {
-                icon.style.stroke = "currentColor";
-                link.title = "Activar notificaciones";
-            }
-        }
-
-        document.getElementById('push-toggle').addEventListener('click', async () => {
-            if (!window.isSecureContext) {
-                alert('Las notificaciones Push requieren un contexto seguro (HTTPS o localhost). \n\nSi estás usando una IP local (ej. 192.168.x.x), el navegador bloquea esta función por seguridad.');
-                return;
-            }
-
-            const registration = await navigator.serviceWorker.ready;
-            const subscription = await registration.pushManager.getSubscription();
-
-            if (subscription) {
-                // Unsubscribe
-                await subscription.unsubscribe();
-                await fetch(API_BASE_URL + '/push/unsubscribe', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
-                    },
-                    body: JSON.stringify({ endpoint: subscription.endpoint })
-                });
-            } else {
-                // Subscribe
-                const result = await Notification.requestPermission();
-                if (result === 'granted') {
-                    const newSubscription = await registration.pushManager.subscribe({
-                        userVisibleOnly: true,
-                        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-                    });
-
-                    const res = await fetch(API_BASE_URL + '/push/subscribe', {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
-                        },
-                        body: JSON.stringify(newSubscription)
-                    });
-                    if (!res.ok) {
-                        const err = await res.json();
-                        alert('Error al suscribirse: ' + (err.message || 'Error desconocido'));
-                    }
-                }
-            }
-            updateSubscriptionUI();
-        });
     </script>
     {% endif %}
 </body>

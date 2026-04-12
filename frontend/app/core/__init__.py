@@ -76,7 +76,7 @@ def create_app(config_class=None):
     @app.context_processor
     def inject_vars():
         return dict(
-            API_BASE=API_BASE,
+            API_BASE="/api" if os.environ.get("FLASK_ENV") == "production" else API_BASE,
             VAPID_PUBLIC_KEY=app.config.get("VAPID_PUBLIC_KEY")
         )
 
