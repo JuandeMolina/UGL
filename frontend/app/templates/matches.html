@@ -40,6 +40,8 @@
     <div class="match-status-col">
         {% if match.is_completed %}
         <span class="status-badge status-done">Finalizado</span>
+        {% elif match.playing_now %}
+        <span class="status-badge status-pending" style="background: rgba(59, 130, 246, 0.09); color: var(--blue); border-color: rgba(59, 130, 246, 0.22);">En juego</span>
         {% else %}
         <span class="status-badge status-pending">Pendiente</span>
         {% endif %}

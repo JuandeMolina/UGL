@@ -1650,7 +1650,7 @@ tr.self-row .row-actions button {
     }
 
     .stats-row .stat-card:last-child {
-        display: none;
+        /* display: none; Removido porque oculta la 4ta tarjeta en el perfil (MVPs, paradas...) */
     }
 
     .dash-wrapper {
