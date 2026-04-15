@@ -19,7 +19,7 @@ class Player(db.Model):
     description: str = db.Column(db.Text, nullable=True)
 
     assignments = db.relationship(
-        "MatchAssignment", backref="player", lazy=True, cascade="all, delete-orphan"
+        "MatchAssignment", back_populates="player", cascade="all, delete-orphan"
     )
 
     def __repr__(self):

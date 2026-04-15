@@ -75,8 +75,10 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_vars():
+        # Detectamos si el servidor es el monolito (puerto 5000) o producción
+        # Si usamos /api, el navegador llamará al mismo servidor que sirve la web
         return dict(
-            API_BASE="/api" if os.environ.get("FLASK_ENV") == "production" else API_BASE,
+            API_BASE="/api", 
             VAPID_PUBLIC_KEY=app.config.get("VAPID_PUBLIC_KEY")
         )
 

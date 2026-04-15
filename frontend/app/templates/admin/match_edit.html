@@ -45,7 +45,8 @@
                     <select id="pda_kit_color" name="pda_kit_color" class="form-select">
                         <option value="" {% if not match.pda_kit_color %}selected{% endif %}>(Sin asignar)</option>
                         {% for color in ['Blanco', 'Negro', 'Azul', 'Rojo', 'Verde', 'Amarillo', 'Gris'] %}
-                        <option value="{{ color }}" {% if match.pda_kit_color == color %}selected{% endif %}>{{ color }}</option>
+                        <option value="{{ color }}" {% if match.pda_kit_color==color %}selected{% endif %}>{{ color }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
@@ -54,16 +55,11 @@
                     <select id="atg_kit_color" name="atg_kit_color" class="form-select">
                         <option value="" {% if not match.atg_kit_color %}selected{% endif %}>(Sin asignar)</option>
                         {% for color in ['Blanco', 'Negro', 'Azul', 'Rojo', 'Verde', 'Amarillo', 'Gris'] %}
-                        <option value="{{ color }}" {% if match.atg_kit_color == color %}selected{% endif %}>{{ color }}</option>
+                        <option value="{{ color }}" {% if match.atg_kit_color==color %}selected{% endif %}>{{ color }}
+                        </option>
                         {% endfor %}
                     </select>
                 </div>
-            </div>
-
-            <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; margin-top: 10px; margin-bottom: 20px;">
-                <input type="checkbox" id="playing_now" name="playing_now" {% if match.playing_now %}checked{% endif %} 
-                       style="width: 20px; height: 20px; cursor: pointer;">
-                <label for="playing_now" style="font-weight: 600; cursor: pointer; margin-bottom: 0;">Partido "En Juego" (🟢 En Vivo)</label>
             </div>
 
             <div style="margin-top: 32px;">
@@ -76,10 +72,26 @@
 </div>
 
 <style>
-    .admin-form { display: flex; flex-direction: column; gap: 20px; }
-    .form-group { display: flex; flex-direction: column; gap: 8px; }
-    .form-group label { font-size: 0.88rem; font-weight: 700; color: var(--text-dark); }
-    .form-group input, .form-group .form-select {
+    .admin-form {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .form-group label {
+        font-size: 0.88rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .form-group input,
+    .form-group .form-select {
         padding: 12px 16px;
         border-radius: var(--radius-sm);
         border: 1px solid var(--border);
@@ -89,7 +101,9 @@
         transition: border-color .2s, box-shadow .2s;
         width: 100%;
     }
-    .form-group input:focus, .form-group .form-select:focus {
+
+    .form-group input:focus,
+    .form-group .form-select:focus {
         outline: none;
         border-color: var(--blue);
         box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);

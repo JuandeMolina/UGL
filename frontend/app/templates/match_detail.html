@@ -16,14 +16,31 @@
             style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; flex-wrap: wrap; gap: 10px;">
             <div>
                 <p class="section-label">Jornada {{ match.matchday }}</p>
-                <p style="font-size: 0.88rem; color: var(--text-muted);">📅 {{ match.date | datetime_es }} | 📍 {{
+                <p style="font-size: 0.88rem; color: var(--text-muted);">📅 {{ match.date | datetime_es }} ─ {{
+                    match.date[11:16] }} | 📍 {{
                     match.location }}</p>
             </div>
             <div style="display: flex; gap: 8px; align-items: center; margin-left: auto;">
+                {# Control de Pitido Inicial (Admin) #}
+                {% if current_user.is_admin and not match.is_completed %}
+                {% if not match.kick_off_actual_time %}
+                <button onclick="startMatch()" class="btn btn-primary btn-sm"
+                    style="background: var(--green); border: none; margin-right: 5px;">
+                    📢 Pitar Inicio
+                </button>
+                {% else %}
+                <span
+                    style="font-size: 0.82rem; font-weight: 800; color: var(--green); background: rgba(16, 185, 129, 0.1); padding: 5px 10px; border-radius: var(--radius-xs); border: 1px solid rgba(16, 185, 129, 0.2); margin-right: 5px;">
+                    ⏱️ Inicio: {{ match.kick_off_actual_time[11:16] }}
+                </span>
+                {% endif %}
+                {% endif %}
+
                 {% if current_user.is_admin %}
                 <a href="{{ url_for('main.admin_edit_match', match_id=match.id) }}" class="btn btn-ghost btn-sm">Editar
                     ✏️</a>
                 {% endif %}
+
                 {% if match.is_completed %}
                 <span class="status-badge status-done">Finalizado</span>
                 {% elif match.playing_now %}
@@ -97,6 +114,53 @@
         </div>
         {% endif %}
 
+        {# ── Cronología del partido ── #}
+        {% if goals %}
+        <div style="margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--border);">
+            <p class="section-label" style="margin-bottom: 20px; text-align: center;">Cronología</p>
+            <div class="timeline">
+                {% for g in goals %}
+                <div class="timeline-row {{ 'row-pda' if g.team == 'PDA' else 'row-atg' }}">
+
+                    {# Si es PDA, el botón de borrar va al final (derecha) #}
+                    {% if g.team == 'PDA' %}
+                    <div class="timeline-item">
+                        <span class="timeline-min">{{ g.minute }}'</span>
+                        <span class="timeline-dot dot-pda"></span>
+                        <div class="timeline-content">
+                            <strong>{{ g.scoring_player }}</strong>
+                            {% if g.assisting_player %}
+                            <span class="timeline-assist"> (Asist: {{ g.assisting_player }})</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if current_user.is_admin and not match.is_completed %}
+                    <button onclick="deleteGoal({{ g.id }})" class="btn-delete-goal">✕</button>
+                    {% endif %}
+
+                    {# Si es ATG, el botón de borrar va al principio (izquierda) #}
+                    {% else %}
+                    {% if current_user.is_admin and not match.is_completed %}
+                    <button onclick="deleteGoal({{ g.id }})" class="btn-delete-goal">✕</button>
+                    {% endif %}
+                    <div class="timeline-item">
+                        <span class="timeline-min">{{ g.minute }}'</span>
+                        <span class="timeline-dot dot-atg"></span>
+                        <div class="timeline-content">
+                            <strong>{{ g.scoring_player }}</strong>
+                            {% if g.assisting_player %}
+                            <span class="timeline-assist"> (Asist: {{ g.assisting_player }})</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
         {# MVP Info #}
         {% if match.is_completed and match.mvp_name %}
         <div
@@ -126,8 +190,7 @@
                 style="max-width: 400px; margin: 0 auto;">
 
                 <div style="margin-bottom: 20px; text-align: left;">
-                    <label for="mvp_id" class="section-label" style="display: block; margin-bottom: 8px;">Elegir MVP
-                        del
+                    <label for="mvp_id" class="section-label" style="display: block; margin-bottom: 8px;">Elegir MVP del
                         Partido</label>
                     <select name="mvp_id" id="mvp_id" required class="form-select" style="width: 100%;">
                         <option value="" disabled selected>Selecciona al mejor jugador...</option>
@@ -140,8 +203,7 @@
                 <button type="submit" class="btn btn-primary"
                     style="padding: 12px 32px; font-size: 0.95rem; width: 100%;">Finalizar y Cerrar Acta 🔒</button>
             </form>
-            <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 12px;">Una vez cerrada, las
-                estadísticas
+            <p style="font-size: 0.78rem; color: var(--text-light); margin-top: 12px;">Una vez cerrada, las estadísticas
                 individuales se sumarán al total de la temporada.</p>
         </div>
         {% endif %}
@@ -215,6 +277,45 @@
     </div>
     {% endif %}
 
+    {% if current_user.is_admin and not match.is_completed and match.kick_off_actual_time %}
+    <div class="card anim-slide-up" style="margin-top: 20px; padding: 22px; border: 2px solid var(--blue);">
+        <p class="section-label" style="color: var(--blue);">Registrar Gol ⚽</p>
+
+        <form id="goal-form" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px;">
+            <div class="form-group" style="grid-column: span 2;">
+                <label>Equipo</label>
+                <select id="goal-team" class="form-select" onchange="updatePlayerSelectors()" required>
+                    <option value="PDA">Playas de Auschwitz (PDA)</option>
+                    <option value="ATG">Atlético Gestapoense (ATG)</option>
+                </select>
+            </div>
+
+            <div class="form-group" style="grid-column: span 1;">
+                <label>Minuto (Opcional)</label>
+                <input type="number" id="goal-minute" class="form-select" placeholder="Auto" min="0" max="120">
+            </div>
+
+            <div class="form-group">
+                <label>Autor del Gol</label>
+                <select id="goal-scorer" class="form-select">
+                    <option value="">⭕ Gol en propia</option>
+                    <!-- Se rellena por JS -->
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Asistente (Opcional)</label>
+                <select id="goal-assistant" class="form-select">
+                    <option value="">(Sin asistencia)</option>
+                    <!-- Se rellena por JS -->
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary" style="grid-column: span 2;">Sumar Gol 🥅</button>
+        </form>
+    </div>
+    {% endif %}
+
     {# ── Plantillas de los equipos ─────────────────────────────────────── #}
     {% set team_pda = match.assignments | selectattr("team", "equalto", "PDA") | list %}
     {% set team_atg = match.assignments | selectattr("team", "equalto", "ATG") | list %}
@@ -237,49 +338,22 @@
                     </a>
                     <div class="assignment-right">
                         <div class="assignment-stats-edit">
-                            {# Goles #}
+                            {# Goles (Solo lectura) #}
                             <div class="stat-ctrl">
                                 <span class="stat-label">G</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=-1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-minus">-</button>
-                                </form>
-                                {% endif %}
                                 <span class="stat-val">{{ a.goals }}</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-plus">+</button>
-                                </form>
-                                {% endif %}
                             </div>
-                            {# Asistencias #}
+                            {# Asistencias (Solo lectura) #}
                             <div class="stat-ctrl">
                                 <span class="stat-label">A</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=-1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-minus">-</button>
-                                </form>
-                                {% endif %}
                                 <span class="stat-val">{{ a.assists }}</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-plus">+</button>
-                                </form>
-                                {% endif %}
                             </div>
                         </div>
+                        {# Mantener el botón de borrar jugador de la convocatoria #}
                         {% if current_user.is_admin and not match.is_completed %}
                         <form action="{{ url_for('main.match_unassign', match_id=match.id, assignment_id=a.id) }}"
                             method="POST" style="display:inline;">
-                            <button type="submit" class="btn-delete" title="Quitar">🗑️</button>
+                            <button type="submit" class="btn-delete" title="Quitar de la convocatoria">🗑️</button>
                         </form>
                         {% endif %}
                     </div>
@@ -307,47 +381,22 @@
                     </a>
                     <div class="assignment-right">
                         <div class="assignment-stats-edit">
+                            {# Goles (Solo lectura) #}
                             <div class="stat-ctrl">
                                 <span class="stat-label">G</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=-1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-minus">-</button>
-                                </form>
-                                {% endif %}
                                 <span class="stat-val">{{ a.goals }}</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='goals', delta=1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-plus">+</button>
-                                </form>
-                                {% endif %}
                             </div>
+                            {# Asistencias (Solo lectura) #}
                             <div class="stat-ctrl">
                                 <span class="stat-label">A</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=-1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-minus">-</button>
-                                </form>
-                                {% endif %}
                                 <span class="stat-val">{{ a.assists }}</span>
-                                {% if current_user.is_admin and not match.is_completed %}
-                                <form
-                                    action="{{ url_for('main.match_update_stat', match_id=match.id, assignment_id=a.id, stat_type='assists', delta=1) }}"
-                                    method="POST">
-                                    <button class="btn-stat-plus">+</button>
-                                </form>
-                                {% endif %}
                             </div>
                         </div>
+                        {# Mantener el botón de borrar jugador de la convocatoria #}
                         {% if current_user.is_admin and not match.is_completed %}
                         <form action="{{ url_for('main.match_unassign', match_id=match.id, assignment_id=a.id) }}"
                             method="POST" style="display:inline;">
-                            <button type="submit" class="btn-delete" title="Quitar">🗑️</button>
+                            <button type="submit" class="btn-delete" title="Quitar de la convocatoria">🗑️</button>
                         </form>
                         {% endif %}
                     </div>
@@ -659,6 +708,90 @@
         font-weight: 700 !important;
     }
 
+    .timeline {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        width: 100%;
+    }
+
+    .timeline-row {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        gap: 15px;
+    }
+
+    /* PDA a la izquierda */
+    .row-pda {
+        justify-content: flex-start;
+    }
+
+    /* ATG a la derecha */
+    .row-atg {
+        justify-content: flex-end;
+    }
+
+    .timeline-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 6px 12px;
+        background: rgba(255, 255, 255, 0.5);
+        border-radius: var(--radius-sm);
+        border: 1px solid var(--border);
+    }
+
+    .timeline-min {
+        font-weight: 800;
+        color: var(--text-light);
+        font-size: 0.85rem;
+        min-width: 25px;
+    }
+
+    .timeline-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        flex-shrink: 0;
+    }
+
+    .dot-pda {
+        background: var(--blue);
+        box-shadow: 0 0 8px var(--blue);
+    }
+
+    .dot-atg {
+        background: var(--red);
+        box-shadow: 0 0 8px var(--red);
+    }
+
+    .timeline-content {
+        font-size: 0.9rem;
+        color: var(--text-dark);
+    }
+
+    .timeline-assist {
+        color: var(--text-light);
+        font-size: 0.78rem;
+        font-style: italic;
+    }
+
+    .btn-delete-goal {
+        background: none;
+        border: none;
+        color: var(--red);
+        opacity: 0.2;
+        cursor: pointer;
+        font-size: 1rem;
+        padding: 5px;
+        transition: opacity 0.2s;
+    }
+
+    .btn-delete-goal:hover {
+        opacity: 1;
+    }
+
     @media (max-width: 560px) {
         .teams-cols {
             grid-template-columns: 1fr;
@@ -667,31 +800,119 @@
 </style>
 
 <script>
-    // Manejar confirmación de asistencia
+    // 1. Configuración base
+    const api_path = "{{ API_BASE }}"; // Esto ahora vale "/api"
+    const assignments = {{ match.assignments | tojson }};
+
+    // 2. Manejar confirmación de asistencia (Sí, asistiré / No asistiré)
     document.getElementById('confirm-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const willAttend = e.submitter.value === 'true';
+
+        // Forma más compatible de saber qué botón se pulsó
+        const buttonValue = e.submitter ? e.submitter.value : null;
+        if (buttonValue === null) return;
+
+        const willAttend = buttonValue === 'true';
+        const url = `${api_path}/matches/{{ match.id }}/confirm`;
 
         try {
-            const response = await fetch('{{ API_BASE }}/matches/{{ match.id }}/confirm', {
+            const response = await fetch(url, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + '{{ session.get("jwt") }}'
+                    'Authorization': 'Bearer {{ session.get("jwt") }}'
                 },
                 body: JSON.stringify({ will_attend: willAttend })
             });
 
             if (response.ok) {
-                // Recargar la página para ver los cambios
+                // Forzamos la recarga para que el backend recalcule la lista
                 window.location.reload();
             } else {
-                alert('Error al confirmar asistencia. Por favor, inténtalo de nuevo.');
+                alert('Error al guardar tu asistencia.');
             }
         } catch (error) {
             console.error('Error:', error);
-            alert('Error de conexión. Verifica tu conexión a internet.');
+            alert('Error de conexión.');
         }
     });
+
+    // 3. Control de selectores de Goles
+    function updatePlayerSelectors() {
+        const team = document.getElementById('goal-team').value;
+        const scorerSel = document.getElementById('goal-scorer');
+        const assistSel = document.getElementById('goal-assistant');
+        if (!scorerSel) return;
+
+        const teamPlayers = assignments.filter(a => a.team === team);
+        let html = '<option value="">⭕ Gol en propia</option>';
+        let assistHtml = '<option value="">(Sin asistencia)</option>';
+
+        teamPlayers.forEach(p => {
+            html += `<option value="${p.player_id}">${p.player_name}</option>`;
+            assistHtml += `<option value="${p.player_id}">${p.player_name}</option>`;
+        });
+
+        scorerSel.innerHTML = html;
+        assistSel.innerHTML = assistHtml;
+    }
+
+    if (document.getElementById('goal-team')) updatePlayerSelectors();
+
+    // 4. Pitar Inicio
+    async function startMatch() {
+        if (!confirm("¿Empezar el partido ahora?")) return;
+        const url = `${api_path}/matches/{{ match.id }}/kickoff`;
+
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': 'Bearer {{ session.get("jwt") }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (res.ok) window.location.reload();
+        } catch (e) {
+            alert("Error de conexión al iniciar partido.");
+        }
+    }
+
+    // 5. Registro de Goles
+    document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const minuteVal = document.getElementById('goal-minute').value;
+
+        const data = {
+            team: document.getElementById('goal-team').value,
+            scoring_player_id: document.getElementById('goal-scorer').value || null,
+            assisting_player_id: document.getElementById('goal-assistant').value || null,
+            // Si el campo minuto tiene algo, lo enviamos como número, si no, enviamos null
+            minute: minuteVal !== "" ? parseInt(minuteVal) : null
+        };
+
+        const res = await fetch(`${api_path}/matches/{{ match.id }}/goals`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {{ session.get("jwt") }}'
+            },
+            body: JSON.stringify(data)
+        });
+
+        if (res.ok) window.location.reload();
+        else alert("Error al guardar el gol");
+    });
+
+    // 6. Borrar Goles
+    async function deleteGoal(goalId) {
+        if (!confirm("¿Eliminar este gol?")) return;
+        const res = await fetch(`${api_path}/matches/{{ match.id }}/goals/${goalId}`, {
+            method: 'DELETE',
+            headers: { 'Authorization': 'Bearer {{ session.get("jwt") }}' }
+        });
+        if (res.ok) window.location.reload();
+    }
 </script>
 {% endblock %}

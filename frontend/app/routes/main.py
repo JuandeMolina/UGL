@@ -119,22 +119,23 @@ def matches():
 @login_required
 def match_detail(match_id):
     r, status = api_get(f"{API_BASE}/matches/{match_id}")
-    if status == 404:
-        abort(404)
-    if status == 401:
-        return redirect(url_for("auth.login"))
-    if r is None:
-        abort(503)
+    if status != 200: abort(status)
 
     match_data = r.json()
+    
+    # También necesitamos los goles para la cronología
+    rg, _ = api_get(f"{API_BASE}/matches/{match_id}/goals")
+    goals = rg.json() if rg else []
+
     players = []
-    # Si es admin, necesitamos la lista de todos los jugadores para el selector
     if current_user.is_admin:
         rp, _ = api_get(f"{API_BASE}/players/")
-        if rp:
-            players = rp.json()
+        if rp: players = rp.json()
 
-    return render_template("match_detail.html", match=match_data, players=players)
+    return render_template("match_detail.html", 
+                           match=match_data, 
+                           goals=goals, 
+                           players=players)
 
 
 @main.route("/matches/<int:match_id>/assign", methods=["POST"])

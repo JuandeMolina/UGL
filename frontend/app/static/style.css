@@ -1713,8 +1713,10 @@ tr.self-row .row-actions button {
         grid-template-columns: 1fr;
     }
 }
+
 /* ─── UGL RESPONSIVE OVERHAUL ────────────────────────────────────────── */
 @media (max-width: 768px) {
+
     /* Navbar Mobile */
     .navbar {
         padding: 0 16px;
@@ -1724,27 +1726,35 @@ tr.self-row .row-actions button {
         border-bottom: none;
         box-shadow: 0 -1px 20px rgba(20, 40, 80, 0.06);
     }
+
     .navbar-brand {
         display: none;
     }
+
     .nav-label {
         display: none;
     }
+
     .nav-icon {
         display: block;
     }
+
     .nav-link {
         padding: 5px 10px;
     }
+
     .nav-username {
         display: none;
     }
+
     .nav-logout {
         padding: 8px 12px;
     }
+
     .navbar-spacer {
         display: none;
     }
+
     .navbar-nav {
         flex: 1;
         justify-content: space-around;
@@ -1763,10 +1773,12 @@ tr.self-row .row-actions button {
         gap: 24px;
         text-align: center;
     }
+
     .hero-desc {
         margin-left: auto;
         margin-right: auto;
     }
+
     .feature-list {
         align-items: center;
     }
@@ -1776,7 +1788,9 @@ tr.self-row .row-actions button {
         gap: 16px;
     }
 
-    .dash-wrapper, .admin-wrapper, .index-wrapper {
+    .dash-wrapper,
+    .admin-wrapper,
+    .index-wrapper {
         padding-top: 24px !important;
         padding-bottom: 80px !important;
     }
@@ -1793,17 +1807,20 @@ tr.self-row .row-actions button {
     .scoreboard {
         gap: 10px;
     }
+
     .scoreboard-score {
         font-size: 2rem !important;
         min-width: 80px;
     }
+
     .scoreboard-team-name {
         font-size: 0.85rem !important;
     }
 }
 
 /* Global Fix for small devices */
-body, html {
+body,
+html {
     overflow-x: hidden;
     width: 100%;
 }
@@ -1811,4 +1828,41 @@ body, html {
 .page-content {
     max-width: 100vw;
     overflow-x: hidden;
+}
+
+.timeline {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.timeline-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+
+.timeline-min {
+    font-weight: 800;
+    color: var(--text-light);
+    width: 30px;
+}
+
+.timeline-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+}
+
+.dot-pda {
+    background: var(--blue);
+}
+
+.dot-atg {
+    background: var(--red);
+}
+
+.timeline-content {
+    flex: 1;
 }

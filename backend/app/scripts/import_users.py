@@ -54,7 +54,7 @@ def import_from_file(file_path: str):
 
 if __name__ == "__main__":
     # El archivo users.txt está en la raíz del proyecto /home/juande/UGL/
-    default_path = "../../users.txt"
+    default_path = "/home/juande/UGL/users.txt"
     path = sys.argv[1] if len(sys.argv) > 1 else default_path
     
     # Resolver ruta absoluta si es relativa a este script

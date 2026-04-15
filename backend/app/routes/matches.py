@@ -50,13 +50,50 @@ confirmation_model = ns.model(
     },
 )
 
+kickoff_model = ns.model(
+    "Kickoff",
+    {
+        "actual_time": fields.String(description="ISO string de la hora real de inicio")
+    }
+)
+
+goal_post_model = ns.model(
+    "GoalPost",
+    {
+        "team": fields.String(required=True, description="'PDA' o 'ATG'"),
+        "scoring_player_id": fields.Integer(description="ID del goleador (null si es en propia)"),
+        "assisting_player_id": fields.Integer(description="ID del asistente"),
+        "minute": fields.Integer(description="Minuto manual (opcional)")
+    }
+)
 
 def sync_match_goals(match):
-    """Recalcula los goles totales del partido basados en las asignaciones."""
-    match.pda_goals = sum(a.goals for a in match.assignments if a.team == "PDA")
-    match.atg_goals = sum(a.goals for a in match.assignments if a.team == "ATG")
+    from ..models.goal import Goal
+    
+    # 1. Aseguramos que los cambios pendientes se preparen
+    db.session.flush()
+    
+    # 2. Obtenemos los goles reales de la base de datos
+    all_goals = Goal.query.filter_by(match_id=match.id).all()
+    
+    # 3. Marcador global (Calculado directamente de los goles)
+    match.pda_goals = len([g for g in all_goals if g.team == "PDA"])
+    match.atg_goals = len([g for g in all_goals if g.team == "ATG"])
+    
+    # 4. Marcadores individuales (Casteando a INT para evitar el error de "1" vs 1)
+    for a in match.assignments:
+        # Filtramos comparando siempre números enteros
+        a.goals = len([g for g in all_goals if g.scoring_player_id and int(g.scoring_player_id) == int(a.player_id)])
+        a.assists = len([g for g in all_goals if g.assisting_player_id and int(g.assisting_player_id) == int(a.player_id)])
+        db.session.add(a)
+    
+    db.session.add(match)
     db.session.commit()
-
+    
+    # Forzar refresco para que no haya caché vieja
+    db.session.refresh(match)
+    for a in match.assignments:
+        db.session.refresh(a)
 
 @ns.route("/")
 class MatchList(Resource):
@@ -119,47 +156,43 @@ class MatchList(Resource):
 class MatchDetail(Resource):
     @jwt_required()
     def get(self, match_id):
-        """Devuelve el detalle de un partido con sus asignaciones, confirmaciones y lista de espera."""
         match = Match.query.get_or_404(match_id)
         
-        assignments = (
-            db.session.query(MatchAssignment, Player.name)
-            .join(Player, MatchAssignment.player_id == Player.id)
-            .filter(MatchAssignment.match_id == match_id)
-            .all()
-        )
-
-        # IDs de jugadores ya asignados a equipos
-        assigned_player_ids = {a.MatchAssignment.player_id for a in assignments}
+        # 1. IDs de jugadores ya asignados a equipos (PDA/ATG)
+        assignments = MatchAssignment.query.filter_by(match_id=match_id).all()
+        assigned_player_ids = [int(a.player_id) for a in assignments]
         
-        # Obtener confirmaciones de asistencia
+        # 2. Confirmaciones de asistencia (Gente que ha dicho que SÍ viene)
         confirmations = MatchConfirmation.query.filter_by(match_id=match_id, will_attend=True).all()
         
-        # Lista de espera: jugadores que confirmaron asistencia pero NO están asignados
+        # 3. Lista de espera: gente confirmada que NO tiene equipo asignado todavía
         waiting_list = []
         for conf in confirmations:
-            if conf.player_id not in assigned_player_ids:
+            if int(conf.player_id) not in assigned_player_ids:
                 waiting_list.append({
                     "player_id": conf.player_id,
-                    "player_name": conf.player.name
+                    "player_name": conf.player.name if conf.player else "Jugador Desconocido"
                 })
         
-        # Confirmación del usuario actual
-        user_id = int(get_jwt_identity())
-        user = User.query.get(user_id)
+        # 4. Saber qué ha respondido el usuario actual (para pintar los botones)
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
         user_confirmation = None
+        
         if user and user.player_id:
-            conf = MatchConfirmation.query.filter_by(
+            # Buscamos la respuesta (Sí o No) de este usuario para este partido
+            conf_existente = MatchConfirmation.query.filter_by(
                 match_id=match_id,
                 player_id=user.player_id
             ).first()
-            if conf:
-                user_confirmation = conf.will_attend
+            if conf_existente:
+                user_confirmation = conf_existente.will_attend
 
         return {
             "id": match.id,
             "matchday": match.matchday,
             "date": match.date.isoformat(),
+            "kick_off_actual_time": match.kick_off_actual_time.isoformat() if match.kick_off_actual_time else None,
             "location": match.location,
             "cost": match.cost,
             "pda_goals": match.pda_goals,
@@ -172,12 +205,12 @@ class MatchDetail(Resource):
             "mvp_name": match.mvp.name if match.mvp else None,
             "assignments": [
                 {
-                    "id": a.MatchAssignment.id,
-                    "player_id": a.MatchAssignment.player_id,
-                    "player_name": a.name,
-                    "team": a.MatchAssignment.team,
-                    "goals": a.MatchAssignment.goals,
-                    "assists": a.MatchAssignment.assists,
+                    "id": a.id,
+                    "player_id": a.player_id,
+                    "player_name": a.player.name if a.player else "N/A",
+                    "team": a.team,
+                    "goals": a.goals,
+                    "assists": a.assists,
                 }
                 for a in assignments
             ],
@@ -307,12 +340,92 @@ class MatchAssignmentDetail(Resource):
         sync_match_goals(match)
         return {"message": "Asignación eliminada."}, 200
 
+@ns.route("/<int:match_id>/kickoff")
+class MatchKickoff(Resource):
+    @jwt_required()
+    def post(self, match_id):
+        """Establece el pitido inicial y pone el partido 'En Juego'."""
+        match = Match.query.get_or_404(match_id)
+        
+        from datetime import datetime
+        from zoneinfo import ZoneInfo
+        madrid_tz = ZoneInfo("Europe/Madrid")
+
+        # Guardamos la hora real
+        match.kick_off_actual_time = datetime.now(madrid_tz)
+        
+        # AUTOMATIZACIÓN: Cambiamos el estado a En Juego
+        match.playing_now = True
+        match.is_completed = False # Por si acaso estaba finalizado
+            
+        db.session.commit()
+        return {
+            "message": "¡Partido empezado!", 
+            "kick_off": match.kick_off_actual_time.isoformat(),
+            "playing_now": True
+        }, 200
+
+@ns.route("/<int:match_id>/goals")
+class MatchGoalList(Resource):
+    @jwt_required()
+    def get(self, match_id):
+        """Lista la cronología de goles de un partido."""
+        from ..models.goal import Goal # Importación local para evitar circulares
+        goals = Goal.query.filter_by(match_id=match_id).order_by(Goal.minute.asc()).all()
+        return [{
+            "id": g.id,
+            "team": g.team,
+            "scoring_player": g.scoring_player.name if g.scoring_player else "⭕ Gol en propia",
+            "scoring_player_id": g.scoring_player_id,
+            "assisting_player": g.assisting_player.name if g.assisting_player else None,
+            "assisting_player_id": g.assisting_player_id,
+            "minute": g.minute
+        } for g in goals], 200
+
+    @jwt_required()
+    @ns.expect(goal_post_model)
+    def post(self, match_id):
+        from ..models.goal import Goal
+        match = Match.query.get_or_404(match_id)
+        data = ns.payload
+        
+        # 1. Creamos el gol vinculado al OBJETO match (no al ID) para que calculate_minute funcione
+        new_goal = Goal(
+            match=match, 
+            team=data["team"],
+            scoring_player_id=data.get("scoring_player_id"),
+            assisting_player_id=data.get("assisting_player_id")
+        )
+        
+        # 2. Calculamos minuto ANTES de añadir a la DB
+        new_goal.minute = new_goal.calculate_minute()
+            
+        db.session.add(new_goal)
+        
+        # 3. Sincronizamos (esto hace el commit y limpia la caché)
+        sync_match_goals(match)
+        
+        return {"message": "Gol registrado", "minute": new_goal.minute}, 201
+
+@ns.route("/<int:match_id>/goals/<int:goal_id>")
+class MatchGoalDelete(Resource):
+    @jwt_required()
+    def delete(self, match_id, goal_id):
+        """Elimina un gol y recalcula marcador."""
+        from ..models.goal import Goal
+        goal = Goal.query.filter_by(id=goal_id, match_id=match_id).first_or_404()
+        match = goal.match
+        
+        db.session.delete(goal)
+        db.session.commit()
+        
+        sync_match_goals(match) # Recalcular marcador tras borrar
+        return {"message": "Gol eliminado correctamente"}, 200
 
 @ns.route("/<int:match_id>/complete")
 class MatchComplete(Resource):
     @jwt_required()
     def post(self, match_id):
-        """Finaliza el partido y calcula el resultado final."""
         match = Match.query.get_or_404(match_id)
         if match.is_completed:
             return {"message": "El partido ya está finalizado."}, 400
@@ -322,18 +435,17 @@ class MatchComplete(Resource):
         if mvp_id:
             match.mvp_id = mvp_id
 
-        assignments = MatchAssignment.query.filter_by(match_id=match_id).all()
-        pda_goals = sum(a.goals for a in assignments if a.team == "PDA")
-        atg_goals = sum(a.goals for a in assignments if a.team == "ATG")
+        # Sincronizamos todo por última vez antes de cerrar
+        sync_match_goals(match)
 
-        match.pda_goals = pda_goals
-        match.atg_goals = atg_goals
+        # Cerramos acta
         match.is_completed = True
         match.playing_now = False
         
         db.session.commit()
+        
         return {
             "message": "Partido finalizado con éxito.",
-            "pda_goals": pda_goals,
-            "atg_goals": atg_goals
+            "pda_goals": match.pda_goals, # Usamos el valor real ya guardado
+            "atg_goals": match.atg_goals
         }, 200
