@@ -389,7 +389,10 @@ class MatchGoalList(Resource):
         match = Match.query.get_or_404(match_id)
         data = ns.payload
         
-        # 1. Creamos el gol vinculado al OBJETO match (no al ID) para que calculate_minute funcione
+        # 1. Capturamos el minuto que viene del formulario
+        manual_minute = data.get("minute")
+        
+        # 2. Creamos el objeto inicial
         new_goal = Goal(
             match=match, 
             team=data["team"],
@@ -397,12 +400,20 @@ class MatchGoalList(Resource):
             assisting_player_id=data.get("assisting_player_id")
         )
         
-        # 2. Calculamos minuto ANTES de añadir a la DB
-        new_goal.minute = new_goal.calculate_minute()
+        # 3. LÓGICA BLINDADA:
+        # Si manual_minute es 0, 10, 90... se guarda ese número.
+        # Solo si es None (campo vacío) entra el cálculo automático.
+        if manual_minute is not None:
+            print(f"DEBUG: Usando minuto manual: {manual_minute}")
+            new_goal.minute = int(manual_minute)
+        else:
+            calculated = new_goal.calculate_minute()
+            print(f"DEBUG: Calculando minuto automático: {calculated}")
+            new_goal.minute = calculated
             
         db.session.add(new_goal)
         
-        # 3. Sincronizamos (esto hace el commit y limpia la caché)
+        # 4. Sincronizamos (esto hace el commit y limpia la caché)
         sync_match_goals(match)
         
         return {"message": "Gol registrado", "minute": new_goal.minute}, 201

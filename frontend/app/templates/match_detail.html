@@ -882,15 +882,17 @@
     document.getElementById('goal-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
 
-        const minuteVal = document.getElementById('goal-minute').value;
+        const minuteInput = document.getElementById('goal-minute').value;
 
         const data = {
             team: document.getElementById('goal-team').value,
             scoring_player_id: document.getElementById('goal-scorer').value || null,
             assisting_player_id: document.getElementById('goal-assistant').value || null,
-            // Si el campo minuto tiene algo, lo enviamos como número, si no, enviamos null
-            minute: minuteVal !== "" ? parseInt(minuteVal) : null
+            // Si el input está vacío, mandamos null. Si tiene algo, lo convertimos a número entero.
+            minute: (minuteInput === "" || minuteInput === null) ? null : parseInt(minuteInput)
         };
+
+        console.log("Enviando datos de gol:", data); // Para que verifiques en F12 qué se envía
 
         const res = await fetch(`${api_path}/matches/{{ match.id }}/goals`, {
             method: 'POST',
@@ -901,8 +903,12 @@
             body: JSON.stringify(data)
         });
 
-        if (res.ok) window.location.reload();
-        else alert("Error al guardar el gol");
+        if (res.ok) {
+            window.location.reload();
+        } else {
+            const err = await res.json();
+            alert("Error al guardar el gol: " + (err.message || "Error desconocido"));
+        }
     });
 
     // 6. Borrar Goles
