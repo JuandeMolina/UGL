@@ -256,8 +256,11 @@ class MatchConfirmationResource(Resource):
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         
-        if not user or not user.player_id:
-            return {"message": "Usuario sin jugador asociado."}, 400
+        if not user:
+            return {"message": "Usuario no encontrado."}, 404
+
+        if not user.player_id:
+            return {"message": "No puedes inscribirte con una cuenta de invitado.", "error": "guest_account"}, 403
             
         data = ns.payload or {}
         will_attend = data.get("will_attend", False)
@@ -399,10 +402,7 @@ class MatchGoalList(Resource):
             scoring_player_id=data.get("scoring_player_id"),
             assisting_player_id=data.get("assisting_player_id")
         )
-        
-        # 3. LÓGICA BLINDADA:
-        # Si manual_minute es 0, 10, 90... se guarda ese número.
-        # Solo si es None (campo vacío) entra el cálculo automático.
+
         if manual_minute is not None:
             print(f"DEBUG: Usando minuto manual: {manual_minute}")
             new_goal.minute = int(manual_minute)
