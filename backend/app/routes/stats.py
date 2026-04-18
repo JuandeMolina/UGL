@@ -71,9 +71,9 @@ class WeirdStatsList(Resource):
                 }
 
         # 2. Amuleto del portero (Juande y José Manuel)
-        # Find Juande and Josito
+        # Find Juande and José Manuel
         juande = next((p for p in players.values() if "juande" in p.name.lower()), None)
-        jose_manuel = next((p for p in players.values() if "jose manuel" in p.name.lower()), None)
+        jose_manuel = next((p for p in players.values() if "josé manuel" in p.name.lower() or "jose manuel" in p.name.lower() or "jose_manuel" in p.name.lower() or "de la torre" in p.name.lower()), None)
         
         amuletos = {}
         for portero in [juande, jose_manuel]:
