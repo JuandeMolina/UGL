@@ -72,6 +72,16 @@
                     </span>
                     <span class="nav-label">Partidos</span>
                 </a></li>
+            <li><a href="{{ url_for('main.weird_stats') }}"
+                    class="nav-link {% if request.path.startswith('/weird_stats') %}nav-active{% endif %}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Estadísticas</span>
+                </a></li>
             {% if current_user.is_admin %}
             <li><a href="{{ url_for('main.admin_new_match') }}"
                     class="nav-link nav-link-admin {% if request.path.startswith('/admin') or request.path.endswith('/edit') or request.path.endswith('/new') %}nav-active{% endif %}"

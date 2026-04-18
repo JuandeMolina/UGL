@@ -321,3 +321,13 @@ def admin_stats():
     
     stats = r.json()
     return render_template("admin/stats.html", stats=stats)
+
+@main.route("/weird_stats")
+@login_required
+def weird_stats():
+    r, status = api_get(f"{API_BASE}/stats/weird")
+    if status == 401:
+        return redirect(url_for("auth.login"))
+    if status == 503 or r is None:
+        abort(503)
+    return render_template("stats.html", stats=r.json())

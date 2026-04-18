@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}Estadísticas Absurdas — UGL{% endblock %}
+
+{% block content %}
+<div class="dash-wrapper">
+    <div class="dash-page-header anim-slide-up">
+        <p class="eyebrow">Curiosidades</p>
+        <h2>Estadísticas Absurdas</h2>
+        <p>Datos inútiles que no sabías que necesitabas.</p>
+    </div>
+
+    <div class="stats-grid anim-slide-up anim-delay-1">
+        {% for stat in stats %}
+        <div class="stat-card card {% if stat.is_wide %}stat-card-wide{% endif %}">
+            <div class="stat-title">{{ stat.title }}</div>
+            <div class="stat-desc">{{ stat.desc }}</div>
+            {% if stat.value == 'custom' %}
+                {{ stat.custom_html | safe }}
+            {% else %}
+                <div class="stat-value">{{ stat.value }}</div>
+                {% if stat.subvalue %}
+                <div class="stat-subvalue">{{ stat.subvalue }}</div>
+                {% endif %}
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+</div>
+
+<style>
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+        padding-bottom: 40px;
+    }
+
+    .stat-card {
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        background: linear-gradient(145deg, #ffffff, #f9fafb);
+        border: 1px solid rgba(0,0,0,0.05);
+        border-radius: 16px;
+        transition: transform 0.2s var(--ease-spring), box-shadow 0.2s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.08); /* slight shadow on hover for dynamic feel */
+    }
+
+    .stat-card-wide {
+        grid-column: span 1;
+    }
+
+    @media (min-width: 650px) {
+        .stat-card-wide {
+            grid-column: span 2;
+        }
+    }
+
+    .stat-title {
+        font-size: 1.1rem;
+        font-weight: 800;
+        margin-bottom: 6px;
+        letter-spacing: -0.02em;
+        background: linear-gradient(90deg, var(--blue) 0%, var(--green) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        color: transparent; /* Fallback for browsers that don't support clip */
+    }
+
+    .stat-desc {
+        font-size: 0.85rem;
+        color: var(--text-light);
+        margin-bottom: 20px;
+        line-height: 1.4;
+    }
+
+    .stat-value {
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: var(--text-dark);
+        margin-top: auto;
+        line-height: 1.2;
+    }
+
+    .stat-subvalue {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: var(--text-mid);
+        margin-top: 6px;
+    }
+
+</style>
+{% endblock %}
