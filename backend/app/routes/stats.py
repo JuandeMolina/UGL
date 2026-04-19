@@ -218,7 +218,7 @@ class WeirdStatsList(Resource):
         
         for portero in [juande, jose_manuel]:
             if not portero: continue
-            name_short = portero.name.split()[0]
+            name_short = "José Manuel" if "manuel" in portero.name.lower() or "torre" in portero.name.lower() else portero.name.split()[0]
             if portero.name in amuletos:
                 v = amuletos[portero.name]
                 result.append({
@@ -251,8 +251,8 @@ class WeirdStatsList(Resource):
 
         efecto_html = ""
         for portero_name, data in efecto_siesta.items():
-            name_short = portero_name.split()[0]
-            efecto_html += f'<div style="margin-top:12px; display:flex; align-items:center; justify-content:space-between; background:rgba(0,0,0,0.03); padding:8px 12px; border-radius:8px;"><div style="font-size:0.9rem; font-weight:700; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">{name_short}</div><div style="text-align:right;"><div style="font-size:1.2rem; font-weight:800; color:var(--text-dark)">Minuto {data["minute"]}</div><div style="font-size:0.8rem; color:var(--text-mid); font-weight:600">{data["count"]} goles</div></div></div>'
+            name_short = "José Manuel" if "manuel" in portero_name.lower() or "torre" in portero_name.lower() else portero_name.split()[0]
+            efecto_html += f'<div style="margin-top:12px; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; background:rgba(0,0,0,0.03); padding:12px 18px; border-radius:10px;"><div style="font-size:0.95rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">{name_short}</div><div style="text-align:right;"><div style="font-size:1.3rem; font-weight:800; color:var(--text-dark)">Minuto {data["minute"]}</div><div style="font-size:0.85rem; color:var(--text-mid); font-weight:600">{data["count"]} goles</div></div></div>'
 
         result.append({
             "title": "Efecto siesta",
