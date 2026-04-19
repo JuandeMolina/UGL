@@ -331,3 +331,12 @@ def weird_stats():
     if status == 503 or r is None:
         abort(503)
     return render_template("stats.html", stats=r.json())
+
+@main.route("/laboratory")
+@login_required
+def laboratory():
+    r, status = api_get(f"{API_BASE}/players/")
+    if status != 200:
+        abort(503)
+    players = sorted(r.json(), key=lambda x: x["name"])
+    return render_template("laboratory.html", players=players)

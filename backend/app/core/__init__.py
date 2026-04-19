@@ -80,12 +80,14 @@ def create_app(config_class=None):
     from ..routes.matches import ns as matches_ns
     from ..routes.push import ns as push_ns
     from ..routes.stats import ns as stats_ns
+    from ..routes.laboratory import ns as laboratory_ns
 
     api.add_namespace(auth_ns)
     api.add_namespace(players_ns)
     api.add_namespace(matches_ns)
     api.add_namespace(push_ns)
     api.add_namespace(stats_ns)
+    api.add_namespace(laboratory_ns)
     api.init_app(app)
 
     @app.errorhandler(429)

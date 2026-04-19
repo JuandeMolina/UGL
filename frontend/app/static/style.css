@@ -48,6 +48,7 @@
 
 html {
     scroll-behavior: smooth;
+    background-color: #f0f6ff; /* Color sólido para el rebote de overscroll en iOS */
 }
 
 body {

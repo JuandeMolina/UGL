@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>{% block title %}UGL — Liga de Fútbol Sala{% endblock %}</title>
     <meta name="description"
         content="{% block meta_description %}Gestión privada de la liga de fútbol sala.{% endblock %}">
@@ -83,6 +83,17 @@
                         </svg>
                     </span>
                     <span class="nav-label">Estadísticas</span>
+                </a></li>
+            <li><a href="{{ url_for('main.laboratory') }}"
+                    class="nav-link {% if request.path.startswith('/laboratory') %}nav-active{% endif %}">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" width="22" height="22" stroke="currentColor" stroke-width="2"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v10"></path>
+                            <path d="M8 8V2h8v6l3 10a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2l3-10z"></path>
+                        </svg>
+                    </span>
+                    <span class="nav-label">Laboratorio</span>
                 </a></li>
             {% if current_user.is_admin %}
             <li><a href="{{ url_for('main.admin_new_match') }}"
