@@ -39,7 +39,10 @@ def create_app(config_class=None):
     if config_class:
         app.config.from_object(config_class)
     else:
-        from ... import config
+        try:
+            from ... import config
+        except (ImportError, ValueError):
+            import config
         app.config.from_object(config.Config)
 
     # Initialize extensions

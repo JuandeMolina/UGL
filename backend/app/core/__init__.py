@@ -49,7 +49,12 @@ def create_app(config_class=None):
     if config_class:
         app.config.from_object(config_class)
     else:
-        from ... import config as cfg
+        try:
+            # Try relative import if part of a larger package (monolith)
+            from ... import config as cfg
+        except (ImportError, ValueError):
+            # Fallback to absolute import if run as standalone app
+            import config as cfg
         app.config.from_object(cfg.Config)
 
     # Ensure database directory exists
