@@ -18,6 +18,15 @@ def get_player_name(player_id, players_dict):
     p = players_dict.get(player_id)
     return p.name if p else "Desconocido"
 
+def get_short_name(name):
+    if not name or name == "Desconocido": return "Desconocido"
+    low = name.lower()
+    if "josé manuel" in low or "jose manuel" in low or "de la torre" in low or "jose_manuel" in low: return "José Manuel"
+    if "josé javier" in low or "jose javier" in low: return "José Javier"
+    if "francisco javier" in low: return "Francisco Javier"
+    if "juan antonio" in low: return "Juan Antonio"
+    return name.split()[0]
+
 @ns.route("/weird")
 class WeirdStatsList(Resource):
     @jwt_required()
@@ -207,18 +216,21 @@ class WeirdStatsList(Resource):
         best_wins_pair = max(duplas_wins.keys(), key=lambda k: duplas_wins[k]) if duplas_wins else None
 
         # Formateo de respuesta
+        bp_name = get_player_name(best_player_id, players) if best_player_id else ""
+        subvalue_piedra = f"{piedra_en_el_zapato['value']} jugando con {bp_name} (MVP)" if piedra_en_el_zapato else ""
+        
         result = [
             {
                 "title": "Piedra en el zapato",
-                "desc": "Peor porcentaje de victorias jugando con el MVP de la UGL",
+                "desc": "Peor porcentaje de victorias jugando con el MVP actual de la UGL",
                 "value": piedra_en_el_zapato["player"] if piedra_en_el_zapato else "N/A",
-                "subvalue": piedra_en_el_zapato["value"] if piedra_en_el_zapato else ""
+                "subvalue": subvalue_piedra
             }
         ]
         
         for portero in [juande, jose_manuel]:
             if not portero: continue
-            name_short = "José Manuel" if "manuel" in portero.name.lower() or "torre" in portero.name.lower() else portero.name.split()[0]
+            name_short = get_short_name(portero.name)
             if portero.name in amuletos:
                 v = amuletos[portero.name]
                 result.append({
@@ -251,7 +263,7 @@ class WeirdStatsList(Resource):
 
         efecto_html = ""
         for portero_name, data in efecto_siesta.items():
-            name_short = "José Manuel" if "manuel" in portero_name.lower() or "torre" in portero_name.lower() else portero_name.split()[0]
+            name_short = get_short_name(portero_name)
             efecto_html += f'<div style="margin-top:12px; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; background:rgba(0,0,0,0.03); padding:12px 18px; border-radius:10px;"><div style="font-size:0.95rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">{name_short}</div><div style="text-align:right;"><div style="font-size:1.3rem; font-weight:800; color:var(--text-dark)">Minuto {data["minute"]}</div><div style="font-size:0.85rem; color:var(--text-mid); font-weight:600">{data["count"]} goles</div></div></div>'
 
         result.append({
@@ -283,12 +295,27 @@ class WeirdStatsList(Resource):
             "subvalue": f"{abrelatas_counts.get(abrelatas_pid, 0)} veces" if abrelatas_pid else ""
         })
 
-        result.append({
-            "title": "Repartidor",
-            "desc": "Jugador que ha asistido a más compañeros diferentes",
-            "value": get_player_name(repartidor_pid, players) if repartidor_pid else "N/A",
-            "subvalue": f"A {repartidor_counts.get(repartidor_pid, 0)} compañeros" if repartidor_pid else ""
-        })
+        if repartidor_pid:
+            rep_name = get_player_name(repartidor_pid, players)
+            assisted_names = [get_short_name(get_player_name(pid, players)) for pid in assists_targets[repartidor_pid]]
+            pills = "".join([f'<span style="display:inline-block; background:rgba(0,0,0,0.04); color:var(--text-mid); padding:4px 10px; border-radius:6px; font-size:0.8rem; font-weight:600;">{n}</span>' for n in assisted_names])
+            
+            repartidor_html = f'<div style="text-align:left; margin-top: auto;"><div class="stat-value" style="margin-bottom:12px;">{rep_name} <span style="font-size: 0.9rem; color: var(--text-mid); font-weight: 600;">({len(assisted_names)} compañeros)</span></div><div style="display:flex; flex-wrap:wrap; gap:6px;">{pills}</div></div>'
+
+            result.append({
+                "title": "Repartidor",
+                "desc": "Jugador que ha asistido a más compañeros diferentes",
+                "value": "custom",
+                "custom_html": repartidor_html,
+                "is_wide": True
+            })
+        else:
+            result.append({
+                "title": "Repartidor",
+                "desc": "Jugador que ha asistido a más compañeros diferentes",
+                "value": "N/A",
+                "subvalue": ""
+            })
 
         result.append({
             "title": "Tirador del carro",
