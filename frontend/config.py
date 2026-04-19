@@ -1,7 +1,6 @@
 """
 Module Name: Configuration
-Description:
-    Configuration classes for the UGL client application.
+Description: Configuration classes for the UGL client application.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
@@ -18,6 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 class Config:
+    """Base configuration class."""
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-client")
     DEBUG = False
     TESTING = False
@@ -27,14 +27,17 @@ class Config:
 
 
 class DevelopmentConfig(Config):
+    """Configuration for development environment."""
     DEBUG = True
 
 
 class ProductionConfig(Config):
+    """Configuration for production environment."""
     DEBUG = False
 
 
 class TestingConfig(Config):
+    """Configuration for testing environment."""
     TESTING = True
     WTF_CSRF_ENABLED = False
 

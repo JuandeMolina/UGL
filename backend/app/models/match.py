@@ -1,16 +1,18 @@
 """
 Module Name: Match Model
-Description:
-    Database Match table model.
+Description: Database Match table model.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
 from datetime import datetime
+
 from ..core import db
 
+
 class Match(db.Model):
+    """Represents a soccer league match session."""
     id: int = db.Column(db.Integer, primary_key=True)
     matchday: int = db.Column(db.Integer, nullable=False)
     date: datetime = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -18,7 +20,7 @@ class Match(db.Model):
     location: str = db.Column(db.String(50), nullable=False)
     cost: float = db.Column(db.Float, nullable=False)
     
-    # IMPORTANTE: Deben ser Columnas para que sync_match_goals funcione
+    # Global score columns (synchronized by sync_match_goals)
     pda_goals: int = db.Column(db.Integer, default=0)
     atg_goals: int = db.Column(db.Integer, default=0)
     
@@ -28,6 +30,7 @@ class Match(db.Model):
     atg_kit_color: str = db.Column(db.String(20), nullable=True)
     mvp_id = db.Column(db.Integer, db.ForeignKey("player.id"), nullable=True)
 
+    # Relationships
     mvp = db.relationship("Player", foreign_keys=[mvp_id])
     goals = db.relationship("Goal", back_populates="match", cascade="all, delete-orphan", lazy=True)
     assignments = db.relationship(

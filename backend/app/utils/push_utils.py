@@ -1,6 +1,6 @@
 """
 Module Name: Push Utilities
-Description: Helper functions to send web push notifications.
+Description: Helper functions to send web push notifications using pywebpush.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
@@ -8,19 +8,23 @@ License: MIT
 
 import json
 import logging
-from pywebpush import webpush, WebPushException
+
 from flask import current_app
+from pywebpush import WebPushException, webpush
+
 from ..models import PushSubscription
 
-# VAPID Keys (Deberían estar en variables de entorno, cargamos desde config)
 VAPID_CLAIMS = {
     "sub": "mailto:juande@example.com"
 }
 
+
 def send_push_notification(subscription, message_data):
-    """Envía una notificación individual."""
+    """
+    Sends a push notification to a specific subscription endpoint.
+    Deletes the subscription if the endpoint is found to be invalid (404/410).
+    """
     try:
-        # Recuperamos claves desde la config de la app
         private_key = current_app.config.get("VAPID_PRIVATE_KEY")
         public_key = current_app.config.get("VAPID_PUBLIC_KEY")
         
@@ -43,7 +47,7 @@ def send_push_notification(subscription, message_data):
         return True
     except WebPushException as ex:
         logging.error(f"WebPush error: {ex}")
-        # Si el endpoint ya no es válido, podríamos borrar la suscripción
+        # Delete invalid or expired subscriptions
         if ex.response and ex.response.status_code in [404, 410]:
             from ..core import db
             db.session.delete(subscription)
@@ -53,8 +57,11 @@ def send_push_notification(subscription, message_data):
         logging.error(f"Push error: {e}")
         return False
 
+
 def notify_all_users(title, body, url=None):
-    """Envía una notificación a todos los usuarios suscritos."""
+    """
+    Sends a push notification to all stored subscriptions.
+    """
     subscriptions = PushSubscription.query.all()
     message = {
         "title": title,

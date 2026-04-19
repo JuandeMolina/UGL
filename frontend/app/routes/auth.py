@@ -1,22 +1,23 @@
 """
 Module Name: Auth Blueprint
-Description: Login and logout routes for the UGL client.
+Description: Login and logout routes for the UGL client application.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-from flask import Blueprint, render_template, request, redirect, url_for, session, abort
-from flask_login import login_user, logout_user, login_required
+from flask import Blueprint, abort, redirect, render_template, request, session, url_for
+from flask_login import login_required, login_user, logout_user
 
 from ..models import User
-from ..utils import api_post, API_BASE
+from ..utils import API_BASE, api_post
 
 auth = Blueprint("auth", __name__)
 
 
 @auth.route("/login", methods=["GET", "POST"])
 def login():
+    """Handles user authentication requests."""
     if request.method == "POST":
         email = (request.form.get("email") or "").strip()
         password = request.form.get("password") or ""
@@ -24,6 +25,7 @@ def login():
         if not email or not password:
             return render_template("login.html", error="Introduce tu correo y contraseña."), 400
 
+        # Authenticate with the backend API
         r, status = api_post(
             f"{API_BASE}/auth/login",
             {"email": email, "password": password},
@@ -37,6 +39,7 @@ def login():
         if status != 200:
             return render_template("login.html", error="Correo o contraseña incorrectos."), 401
 
+        # Store JWT in session and log in the user locally
         data = r.json()  # type: ignore
         session["jwt"] = data["access_token"]
         session.permanent = True
@@ -50,6 +53,7 @@ def login():
 @auth.route("/logout", methods=["GET", "POST"])
 @login_required
 def logout():
+    """Logs the user out and clears the session."""
     session.pop("jwt", None)
     logout_user()
     return redirect(url_for("auth.login"))

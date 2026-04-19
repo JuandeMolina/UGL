@@ -1,20 +1,23 @@
 """
-Module Name: HTTP Utils
-Description:
-    Helper functions to communicate with the UGL API backend.
+Module Name: HTTP Utilities
+Description: Helper functions for internal/external communication between frontend and backend.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
+import json
 import os
-from flask import session, redirect, url_for
+import traceback
+
 import requests
+from flask import session
 
 API_BASE = "http://localhost:5001/api"
 
 
 def _headers():
+    """Returns authorization headers using JWT from session."""
     token = session.get("jwt")
     if token:
         return {"Authorization": f"Bearer {token}"}
@@ -22,6 +25,7 @@ def _headers():
 
 
 class DummyResponse:
+    """Mock requests response object for internal WSGI calls."""
     def __init__(self, status_code, json_data):
         self.status_code = status_code
         self._json = json_data
@@ -31,10 +35,12 @@ class DummyResponse:
 
 
 def _internal_request(method, url, data=None, headers=None):
+    """
+    Simulates an HTTP request to the internal WSGI backend (Monolith mode).
+    """
     from wsgi import internal_client
-    import json
     
-    # Extract path from URL
+    # Extract path from URL to dispatch internally
     path = url.replace("http://localhost:5001", "")
     
     kwargs = {}
@@ -47,6 +53,7 @@ def _internal_request(method, url, data=None, headers=None):
     if headers:
         kwargs['headers'] = headers
         
+    # Dispatch to Werkzeug test client
     if method == 'GET':
         resp = internal_client.get(path, **kwargs)
     elif method == 'POST':
@@ -55,8 +62,10 @@ def _internal_request(method, url, data=None, headers=None):
         resp = internal_client.put(path, **kwargs)
     elif method == 'DELETE':
         resp = internal_client.delete(path, **kwargs)
+    else:
+        raise ValueError(f"Unsupported method: {method}")
         
-    # Attempt to decode JSON
+    # Decode JSON response
     try:
         json_data = json.loads(resp.data.decode('utf-8'))
     except Exception:
@@ -66,6 +75,7 @@ def _internal_request(method, url, data=None, headers=None):
 
 
 def api_get(url, handle_401=True):
+    """Wrapper for GET requests to the backend API."""
     try:
         if os.environ.get("FLASK_ENV") == "production":
             r = _internal_request("GET", url, headers=_headers())
@@ -75,12 +85,13 @@ def api_get(url, handle_401=True):
         if handle_401 and r.status_code == 401:
             return None, 401
         return r, r.status_code
-    except Exception as e:
-        import traceback; traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
         return None, 503
 
 
 def api_post(url, data, handle_401=True):
+    """Wrapper for POST requests to the backend API."""
     try:
         if os.environ.get("FLASK_ENV") == "production":
             r = _internal_request("POST", url, data=data, headers=_headers())
@@ -90,12 +101,13 @@ def api_post(url, data, handle_401=True):
         if handle_401 and r.status_code == 401:
             return None, 401
         return r, r.status_code
-    except Exception as e:
-        import traceback; traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
         return None, 503
 
 
 def api_put(url, data, handle_401=True):
+    """Wrapper for PUT requests to the backend API."""
     try:
         if os.environ.get("FLASK_ENV") == "production":
             r = _internal_request("PUT", url, data=data, headers=_headers())
@@ -105,12 +117,13 @@ def api_put(url, data, handle_401=True):
         if handle_401 and r.status_code == 401:
             return None, 401
         return r, r.status_code
-    except Exception as e:
-        import traceback; traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
         return None, 503
 
 
 def api_delete(url):
+    """Wrapper for DELETE requests to the backend API."""
     try:
         if os.environ.get("FLASK_ENV") == "production":
             r = _internal_request("DELETE", url, headers=_headers())
@@ -118,7 +131,6 @@ def api_delete(url):
             r = requests.delete(url, headers=_headers(), timeout=8)
             
         return r, r.status_code
-    except Exception as e:
-        import traceback; traceback.print_exc()
+    except Exception:
+        traceback.print_exc()
         return None, 503
-

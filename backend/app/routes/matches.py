@@ -1,19 +1,18 @@
 """
 Module Name: Matches Namespace
-Description:
-    Endpoints for match listing, creation, detailed management and results.
+Description: Endpoints for match listing, creation, detailed management, and results.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..models import Match, MatchAssignment, Player, User, MatchConfirmation
 from ..core import db
+from ..models import Match, MatchAssignment, MatchConfirmation, Player, User
 
-ns = Namespace("matches", description="Partidos")
+ns = Namespace("matches", description="Gestión de Partidos")
 
 match_model = ns.model(
     "Match",
@@ -22,8 +21,8 @@ match_model = ns.model(
         "date": fields.String(required=True, description="Fecha del partido (ISO)"),
         "location": fields.String(required=True, description="Lugar del partido"),
         "cost": fields.Float(description="Coste del partido"),
-        "pda_kit_color": fields.String(description="Color camistea PDA"),
-        "atg_kit_color": fields.String(description="Color camistea ATG"),
+        "pda_kit_color": fields.String(description="Color equipación PDA"),
+        "atg_kit_color": fields.String(description="Color equipación ATG"),
     },
 )
 
@@ -31,7 +30,7 @@ assignment_model = ns.model(
     "Assignment",
     {
         "player_id": fields.Integer(required=True, description="ID del jugador"),
-        "team": fields.String(required=True, description="'PDA' o 'ATG'"),
+        "team": fields.String(required=True, description="'PDA' or 'ATG'"),
     },
 )
 
@@ -53,36 +52,38 @@ confirmation_model = ns.model(
 kickoff_model = ns.model(
     "Kickoff",
     {
-        "actual_time": fields.String(description="ISO string de la hora real de inicio")
+        "actual_time": fields.String(description="ISO string of the actual start time")
     }
 )
 
 goal_post_model = ns.model(
     "GoalPost",
     {
-        "team": fields.String(required=True, description="'PDA' o 'ATG'"),
-        "scoring_player_id": fields.Integer(description="ID del goleador (null si es en propia)"),
-        "assisting_player_id": fields.Integer(description="ID del asistente"),
-        "minute": fields.Integer(description="Minuto manual (opcional)")
+        "team": fields.String(required=True, description="'PDA' or 'ATG'"),
+        "scoring_player_id": fields.Integer(description="Scorer player ID (null if own goal)"),
+        "assisting_player_id": fields.Integer(description="Assister player ID"),
+        "minute": fields.Integer(description="Manual minute (optional)")
     }
 )
 
 def sync_match_goals(match):
+    """
+    Synchronizes the match score and individual player stats with the Goal table.
+    """
     from ..models.goal import Goal
     
-    # 1. Aseguramos que los cambios pendientes se preparen
+    # Ensure pending changes are prepared
     db.session.flush()
     
-    # 2. Obtenemos los goles reales de la base de datos
+    # Get actual goals from database
     all_goals = Goal.query.filter_by(match_id=match.id).all()
     
-    # 3. Marcador global (Calculado directamente de los goles)
+    # Global score
     match.pda_goals = len([g for g in all_goals if g.team == "PDA"])
     match.atg_goals = len([g for g in all_goals if g.team == "ATG"])
     
-    # 4. Marcadores individuales (Casteando a INT para evitar el error de "1" vs 1)
+    # Individual stats
     for a in match.assignments:
-        # Filtramos comparando siempre números enteros
         a.goals = len([g for g in all_goals if g.scoring_player_id and int(g.scoring_player_id) == int(a.player_id)])
         a.assists = len([g for g in all_goals if g.assisting_player_id and int(g.assisting_player_id) == int(a.player_id)])
         db.session.add(a)
@@ -90,7 +91,7 @@ def sync_match_goals(match):
     db.session.add(match)
     db.session.commit()
     
-    # Forzar refresco para que no haya caché vieja
+    # Refresh to avoid stale cache
     db.session.refresh(match)
     for a in match.assignments:
         db.session.refresh(a)
@@ -99,7 +100,7 @@ def sync_match_goals(match):
 class MatchList(Resource):
     @jwt_required()
     def get(self):
-        """Lista todos los partidos, orden descendente."""
+        """List all matches in descending order."""
         matches = Match.query.order_by(Match.date.desc()).all()
         return [
             {
@@ -124,7 +125,7 @@ class MatchList(Resource):
     @jwt_required()
     @ns.expect(match_model)
     def post(self):
-        """Registra un nuevo partido."""
+        """Register a new match."""
         data = ns.payload
         from datetime import datetime
         match = Match(
@@ -138,16 +139,15 @@ class MatchList(Resource):
         db.session.add(match)
         db.session.commit()
 
-
         try:
             from ..utils.push_utils import notify_all_users
             notify_all_users(
-                "⚽ ¡Nueva Jornada disponible!", 
-                f"Se ha creado la Jornada {match.matchday} ({match.date.strftime('%d/%m')}). ¡Entra para confirmar asistencia!",
+                "⚽ ¡Nueva jornada disponible!", 
+                f"Creada la Jornada {match.matchday} ({match.date.strftime('%d/%m')}). ¡Confirma tu asistencia!",
                 f"/matches/{match.id}"
             )
         except Exception as e:
-            print(f"Error enviando notificaciones: {e}")
+            print(f"Error sending notifications: {e}")
 
         return {"id": match.id, "date": match.date.isoformat()}, 201
 
@@ -156,16 +156,17 @@ class MatchList(Resource):
 class MatchDetail(Resource):
     @jwt_required()
     def get(self, match_id):
+        """Get match details and current associations."""
         match = Match.query.get_or_404(match_id)
         
-        # 1. IDs de jugadores ya asignados a equipos (PDA/ATG)
+        # Players already assigned to teams (PDA/ATG)
         assignments = MatchAssignment.query.filter_by(match_id=match_id).all()
         assigned_player_ids = [int(a.player_id) for a in assignments]
         
-        # 2. Confirmaciones de asistencia (Gente que ha dicho que SÍ viene)
+        # Attendance confirmations (People who said YES)
         confirmations = MatchConfirmation.query.filter_by(match_id=match_id, will_attend=True).all()
         
-        # 3. Lista de espera: gente confirmada que NO tiene equipo asignado todavía
+        # Waiting list: confirmed people without an assigned team yet
         waiting_list = []
         for conf in confirmations:
             if int(conf.player_id) not in assigned_player_ids:
@@ -174,13 +175,12 @@ class MatchDetail(Resource):
                     "player_name": conf.player.name if conf.player else "Jugador Desconocido"
                 })
         
-        # 4. Saber qué ha respondido el usuario actual (para pintar los botones)
+        # Current user's response
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
         user_confirmation = None
         
         if user and user.player_id:
-            # Buscamos la respuesta (Sí o No) de este usuario para este partido
             conf_existente = MatchConfirmation.query.filter_by(
                 match_id=match_id,
                 player_id=user.player_id
@@ -221,7 +221,7 @@ class MatchDetail(Resource):
     @jwt_required()
     @ns.expect(match_model)
     def put(self, match_id):
-        """Actualiza los detalles básicos de un partido."""
+        """Update basic match details."""
         match = Match.query.get_or_404(match_id)
         data = ns.payload
         
@@ -244,7 +244,7 @@ class MatchDetail(Resource):
             match.is_completed = bool(data["is_completed"])
             
         db.session.commit()
-        return {"message": "Partido actualizado con éxito."}, 200
+        return {"message": "Partido actualizado correctamente."}, 200
 
 
 @ns.route("/<int:match_id>/confirm")
@@ -252,7 +252,7 @@ class MatchConfirmationResource(Resource):
     @jwt_required()
     @ns.expect(confirmation_model)
     def post(self, match_id):
-        """Confirmar o cancelar asistencia al partido."""
+        """Confirm or cancel attendance to the match."""
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         
@@ -260,12 +260,12 @@ class MatchConfirmationResource(Resource):
             return {"message": "Usuario no encontrado."}, 404
 
         if not user.player_id:
-            return {"message": "No puedes inscribirte con una cuenta de invitado.", "error": "guest_account"}, 403
+            return {"message": "No puedes apuntarte con una cuenta de invitado.", "error": "guest_account"}, 403
             
         data = ns.payload or {}
         will_attend = data.get("will_attend", False)
         
-        # Buscar confirmación existente
+        # Search for existing confirmation
         confirmation = MatchConfirmation.query.filter_by(
             match_id=match_id,
             player_id=user.player_id
@@ -294,12 +294,12 @@ class MatchAssignmentList(Resource):
     @jwt_required()
     @ns.expect(assignment_model)
     def post(self, match_id):
-        """Asigna un jugador a un equipo."""
+        """Assigns a player to a team."""
         data = ns.payload
         match = Match.query.get_or_404(match_id)
         existing = MatchAssignment.query.filter_by(match_id=match_id, player_id=data["player_id"]).first()
         if existing:
-            return {"message": "Jugador ya asignado."}, 400
+            return {"message": "El jugador ya está asignado."}, 400
 
         assignment = MatchAssignment(match_id=match_id, player_id=data["player_id"], team=data["team"])
         db.session.add(assignment)
@@ -312,7 +312,7 @@ class MatchAssignmentDetail(Resource):
     @jwt_required()
     @ns.expect(stats_model)
     def put(self, match_id, assignment_id):
-        """Actualiza estadísticas de un jugador en el partido."""
+        """Update match stats for a player."""
         assignment = MatchAssignment.query.filter_by(id=assignment_id, match_id=match_id).first_or_404()
         data = ns.payload
         if "goals" in data:
@@ -325,41 +325,39 @@ class MatchAssignmentDetail(Resource):
             if new_goals > old_goals:
                 from ..utils.push_utils import notify_all_users
                 notify_all_users(
-                    "¡GOOOL!", 
+                    "¡GOL!", 
                     f"{assignment.player.name} ha marcado para {assignment.team}. PDA {assignment.match.pda_goals} - {assignment.match.atg_goals} ATG",
                     f"/matches/{match_id}"
                 )
         if "assists" in data:
             assignment.assists = data["assists"]
         db.session.commit()
-        return {"message": "Estadísticas actualizadas."}, 200
+        return {"message": "Estadísticas actualizadas correctamente."}, 200
 
     @jwt_required()
     def delete(self, match_id, assignment_id):
-        """Elimina la asignación de un jugador."""
+        """Delete a player assignment."""
         assignment = MatchAssignment.query.filter_by(id=assignment_id, match_id=match_id).first_or_404()
         match = assignment.match
         db.session.delete(assignment)
         sync_match_goals(match)
-        return {"message": "Asignación eliminada."}, 200
+        return {"message": "Asignación eliminada correctamente."}, 200
+
 
 @ns.route("/<int:match_id>/kickoff")
 class MatchKickoff(Resource):
     @jwt_required()
     def post(self, match_id):
-        """Establece el pitido inicial y pone el partido 'En Juego'."""
+        """Starts the match and sets it to 'In Game'."""
         match = Match.query.get_or_404(match_id)
         
         from datetime import datetime
         from zoneinfo import ZoneInfo
         madrid_tz = ZoneInfo("Europe/Madrid")
 
-        # Guardamos la hora real
         match.kick_off_actual_time = datetime.now(madrid_tz)
-        
-        # AUTOMATIZACIÓN: Cambiamos el estado a En Juego
         match.playing_now = True
-        match.is_completed = False # Por si acaso estaba finalizado
+        match.is_completed = False
             
         db.session.commit()
         return {
@@ -368,12 +366,13 @@ class MatchKickoff(Resource):
             "playing_now": True
         }, 200
 
+
 @ns.route("/<int:match_id>/goals")
 class MatchGoalList(Resource):
     @jwt_required()
     def get(self, match_id):
-        """Lista la cronología de goles de un partido."""
-        from ..models.goal import Goal # Importación local para evitar circulares
+        """List match goal timeline."""
+        from ..models.goal import Goal # Local import to avoid circular dependencies
         goals = Goal.query.filter_by(match_id=match_id).order_by(Goal.minute.asc()).all()
         return [{
             "id": g.id,
@@ -388,14 +387,14 @@ class MatchGoalList(Resource):
     @jwt_required()
     @ns.expect(goal_post_model)
     def post(self, match_id):
+        """Registers a new goal."""
         from ..models.goal import Goal
         match = Match.query.get_or_404(match_id)
         data = ns.payload
         
-        # 1. Capturamos el minuto que viene del formulario
+        # Capture minute from form
         manual_minute = data.get("minute")
         
-        # 2. Creamos el objeto inicial
         new_goal = Goal(
             match=match, 
             team=data["team"],
@@ -404,25 +403,21 @@ class MatchGoalList(Resource):
         )
 
         if manual_minute is not None:
-            print(f"DEBUG: Usando minuto manual: {manual_minute}")
             new_goal.minute = int(manual_minute)
         else:
-            calculated = new_goal.calculate_minute()
-            print(f"DEBUG: Calculando minuto automático: {calculated}")
-            new_goal.minute = calculated
+            new_goal.minute = new_goal.calculate_minute()
             
         db.session.add(new_goal)
-        
-        # 4. Sincronizamos (esto hace el commit y limpia la caché)
         sync_match_goals(match)
         
-        return {"message": "Gol registrado", "minute": new_goal.minute}, 201
+        return {"message": "Gol registrado correctamente", "minute": new_goal.minute}, 201
+
 
 @ns.route("/<int:match_id>/goals/<int:goal_id>")
 class MatchGoalDelete(Resource):
     @jwt_required()
     def delete(self, match_id, goal_id):
-        """Elimina un gol y recalcula marcador."""
+        """Deletes a goal and recalculates score."""
         from ..models.goal import Goal
         goal = Goal.query.filter_by(id=goal_id, match_id=match_id).first_or_404()
         match = goal.match
@@ -430,13 +425,15 @@ class MatchGoalDelete(Resource):
         db.session.delete(goal)
         db.session.commit()
         
-        sync_match_goals(match) # Recalcular marcador tras borrar
-        return {"message": "Gol eliminado correctamente"}, 200
+        sync_match_goals(match) 
+        return {"message": "Gol eliminado correctamente."}, 200
+
 
 @ns.route("/<int:match_id>/complete")
 class MatchComplete(Resource):
     @jwt_required()
     def post(self, match_id):
+        """Finalizes the match and assigns MVP."""
         match = Match.query.get_or_404(match_id)
         if match.is_completed:
             return {"message": "El partido ya está finalizado."}, 400
@@ -446,17 +443,17 @@ class MatchComplete(Resource):
         if mvp_id:
             match.mvp_id = mvp_id
 
-        # Sincronizamos todo por última vez antes de cerrar
+        # Final synchronization
         sync_match_goals(match)
 
-        # Cerramos acta
+        # Close match
         match.is_completed = True
         match.playing_now = False
         
         db.session.commit()
         
         return {
-            "message": "Partido finalizado con éxito.",
-            "pda_goals": match.pda_goals, # Usamos el valor real ya guardado
+            "message": "Partido finalizado correctamente.",
+            "pda_goals": match.pda_goals,
             "atg_goals": match.atg_goals
         }, 200

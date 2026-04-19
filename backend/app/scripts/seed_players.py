@@ -1,21 +1,17 @@
 """
 Module Name: Seed Players Script
-Description:
-    Crea los 17 jugadores de la UGL y los vincula automáticamente
-    a sus respectivas cuentas de usuario.
-    Uso: python -m app.scripts.seed_players
-    Ejecutar desde la carpeta backend/.
+Description: Creates the 17 standard UGL players and links them to their accounts.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-import sys
 import os
+import sys
 
+# Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-# Nombre completo, email vinculado, es portero
 PLAYERS = [
     ("Juande Molina",              "juande.molina@ugl.com",    True),
     ("José Manuel de la Torre",    "josito.torre@ugl.com",     True),
@@ -38,47 +34,47 @@ PLAYERS = [
 
 
 def seed():
+    """Initializes the database with standard players."""
     from app import create_app
     from app.core import db
     from app.models import Player, User
 
     app = create_app()
     with app.app_context():
-        existing = Player.query.count()
-        if existing > 0:
-            print(f"[!] Ya existen {existing} jugadores en la base de datos.")
-            print("    Ejecuta este script solo una vez, en una base de datos vacía.")
-            print("    Si quieres repoblar, borra primero la tabla de jugadores.")
+        existing_count = Player.query.count()
+        if existing_count > 0:
+            print(f"[!] Already found {existing_count} players in the database.")
+            print("    Run this script only once on an empty database.")
             sys.exit(1)
 
-        print("Creando jugadores y vinculando usuarios...\n")
-        ok = 0
-        warn = 0
+        print("Creating players and linking users...\n")
+        ok_count = 0
+        warn_count = 0
 
         for name, email, is_gk in PLAYERS:
-            # Crear jugador
+            # Create player
             player = Player(name=name, is_goalkeeper=is_gk)
             db.session.add(player)
-            db.session.flush()  # Para obtener el ID antes del commit
+            db.session.flush()  # Get ID before commit
 
-            # Vincular usuario
+            # Link user
             user = User.query.filter_by(email=email).first()
             if user:
                 user.player_id = player.id
-                status = "✔"
-                ok += 1
+                status_icon = "✔"
+                ok_count += 1
             else:
-                status = "⚠  (usuario no encontrado, jugador creado sin vincular)"
-                warn += 1
+                status_icon = "⚠  (user not found, player created but not linked)"
+                warn_count += 1
 
-            gk_label = " [P]" if is_gk else "    "
-            print(f"  [{status}]{gk_label} {name:<30} ← {email}")
+            gk_label = " [GK]" if is_gk else "     "
+            print(f"  [{status_icon}]{gk_label} {name:<30} ← {email}")
 
         db.session.commit()
 
-        print(f"\nResumen: {ok} vinculados correctamente", end="")
-        if warn:
-            print(f", {warn} jugadores sin usuario asociado.", end="")
+        print(f"\nSummary: {ok_count} linked successfully", end="")
+        if warn_count:
+            print(f", {warn_count} players without associated users.", end="")
         print(".")
 
 

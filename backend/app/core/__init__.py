@@ -1,24 +1,21 @@
 """
 Module Name: Core Configuration
-Description:
-    Creates the Flask app and initializes extensions for the UGL API server.
+Description: Creates the Flask app and initializes extensions for the UGL API server.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-import os
 import logging
 from pathlib import Path
 
 from flask import Flask, jsonify
-from flask_sqlalchemy import SQLAlchemy
-from flask_migrate import Migrate
-from flask_restx import Api
 from flask_jwt_extended import JWTManager
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
-
+from flask_migrate import Migrate
+from flask_restx import Api
+from flask_sqlalchemy import SQLAlchemy
 
 # Extensions
 db = SQLAlchemy()
@@ -43,19 +40,23 @@ limiter = Limiter(key_func=get_remote_address)
 
 
 def create_app(config_class=None):
-    """Application factory."""
+    """
+    Application factory to initialize and configure the Flask app.
+    """
     app = Flask(__name__)
 
-    # Load config
+    # Load configuration
     if config_class:
         app.config.from_object(config_class)
     else:
-        import config as cfg
+        from ... import config as cfg
         app.config.from_object(cfg.Config)
 
-    # Ensure data directory exists for SQLite
-    db_path = app.config["SQLALCHEMY_DATABASE_URI"].replace("sqlite:///", "")
-    Path(db_path).parent.mkdir(parents=True, exist_ok=True)
+    # Ensure database directory exists
+    db_uri = app.config["SQLALCHEMY_DATABASE_URI"]
+    if db_uri.startswith("sqlite:///"):
+        db_path = db_uri.replace("sqlite:///", "")
+        Path(db_path).parent.mkdir(parents=True, exist_ok=True)
 
     # Initialize extensions
     db.init_app(app)
@@ -65,23 +66,25 @@ def create_app(config_class=None):
     limiter.init_app(app)
 
     with app.app_context():
-        # Import all models so SQLAlchemy registers them before create_all
-        from ..models.user import User
-        from ..models.player import Player
+        # Register models
+        from ..models.goal import Goal
         from ..models.match import Match
         from ..models.match_assignment import MatchAssignment
-        from ..models.push_subscription import PushSubscription
         from ..models.match_confirmation import MatchConfirmation
+        from ..models.player import Player
+        from ..models.push_subscription import PushSubscription
+        from ..models.user import User
         db.create_all()
 
-    # Register namespaces
+    # Register API namespaces
     from ..routes.auth import ns as auth_ns
-    from ..routes.players import ns as players_ns
+    from ..routes.laboratory import ns as laboratory_ns
     from ..routes.matches import ns as matches_ns
+    from ..routes.players import ns as players_ns
     from ..routes.push import ns as push_ns
     from ..routes.stats import ns as stats_ns
-    from ..routes.laboratory import ns as laboratory_ns
 
+    api.namespaces.clear() # Avoid duplicates during reloads
     api.add_namespace(auth_ns)
     api.add_namespace(players_ns)
     api.add_namespace(matches_ns)
@@ -92,12 +95,16 @@ def create_app(config_class=None):
 
     @app.errorhandler(429)
     def too_many_requests(e):
+        """Global 429 Error Handler."""
         return jsonify({"error": "too_many_requests"}), 429
 
     return app
 
 
 def setup_logging(app):
+    """
+    Configures log file handler for non-debug mode.
+    """
     if not app.debug:
         log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)

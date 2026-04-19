@@ -3,14 +3,15 @@ Module Name: Laboratory API
 Description: Advanced statistics and cross-queries for the UGL API.
 Author: Juande Molina
 """
-from flask_restx import Namespace, Resource
-from flask_jwt_extended import jwt_required
-from flask import request
-from sqlalchemy import or_, and_
 from collections import defaultdict
 
+from flask import request
+from flask_jwt_extended import jwt_required
+from flask_restx import Namespace, Resource
+from sqlalchemy import and_, or_
+
 from ..core import db
-from ..models import Match, Goal, MatchAssignment, Player
+from ..models import Goal, Match, MatchAssignment, Player
 from .stats import get_short_name
 
 ns = Namespace("laboratory", description="Laboratorio de Estadísticas Avanzadas")
@@ -23,7 +24,7 @@ class MatchesTogether(Resource):
         p2_id = request.args.get("p2", type=int)
         
         if not p1_id or not p2_id:
-            return {"error": "Missing player IDs"}, 400
+            return {"error": "Faltan los IDs de los jugadores"}, 400
             
         # Get matches where p1 played
         p1_matches = {a.match_id: a.team for a in MatchAssignment.query.filter_by(player_id=p1_id).all()}
@@ -54,7 +55,7 @@ class ConnectedGoals(Resource):
         p2_id = request.args.get("p2", type=int)
         
         if not p1_id or not p2_id:
-            return {"error": "Missing player IDs"}, 400
+            return {"error": "Faltan los IDs de los jugadores"}, 400
             
         # Goals where p1 scored and p2 assisted OR vice-versa
         goals = Goal.query.filter(
@@ -85,7 +86,7 @@ class HeadToHead(Resource):
         p2_id = request.args.get("p2", type=int)
         
         if not p1_id or not p2_id:
-            return {"error": "Missing player IDs"}, 400
+            return {"error": "Faltan los IDs de los jugadores"}, 400
             
         p1_assignments = {a.match_id: a.team for a in MatchAssignment.query.filter_by(player_id=p1_id).all()}
         p2_assignments = MatchAssignment.query.filter_by(player_id=p2_id).all()
@@ -99,7 +100,7 @@ class HeadToHead(Resource):
                 if not m or not m.is_completed: continue
                 
                 stats["total"] += 1
-                winner = "PDA" if m.pda_goals > m.atg_goals else ("ATG" if m.atg_goals > m.pda_goals else "DRAW")
+                winner = "PDA" if m.pda_goals > m.atg_goals else ("ATG" if m.atg_goals > m.pda_goals else "EMPATE")
                 
                 p1_team = p1_assignments[m.id]
                 p2_team = a.team
@@ -137,7 +138,7 @@ class IdealPartner(Resource):
     def get(self):
         p_id = request.args.get("p", type=int)
         if not p_id:
-            return {"error": "Missing player ID"}, 400
+            return {"error": "Falta el ID del jugador"}, 400
             
         # Get all matches for player
         p_assignments = MatchAssignment.query.filter_by(player_id=p_id).all()

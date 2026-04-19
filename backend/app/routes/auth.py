@@ -1,17 +1,16 @@
 """
 Module Name: Auth Namespace
-Description:
-    Authentication endpoints: login and logout.
+Description: Authentication endpoints for user login, identity verification, and admin stats.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
+from flask_jwt_extended import create_access_token, get_jwt_identity, jwt_required, verify_jwt_in_request
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
-from ..models import User, Player, Match, MatchAssignment
 from ..core import db
+from ..models import Match, Player, User
 
 ns = Namespace("auth", description="Autenticación")
 
@@ -28,7 +27,7 @@ login_model = ns.model(
 class Login(Resource):
     @ns.expect(login_model)
     def post(self):
-        """Iniciar sesión y obtener token JWT."""
+        """Authenticates user and returns a JWT token."""
         data = ns.payload
         email = (data.get("email") or "").strip()
         password = data.get("password") or ""
@@ -53,8 +52,7 @@ class Login(Resource):
 class Me(Resource):
     @ns.doc(security="Bearer")
     def get(self):
-        """Devuelve los datos del usuario autenticado a partir del JWT."""
-        from flask_jwt_extended import verify_jwt_in_request, get_jwt_identity
+        """Returns details of the currently authenticated user."""
         try:
             verify_jwt_in_request()
         except Exception:
@@ -77,27 +75,27 @@ class Me(Resource):
 class AdminStats(Resource):
     @jwt_required()
     def get(self):
-        """Estadísticas del sistema (solo admins)."""
+        """Returns system statistics (Admin only)."""
         user_id = get_jwt_identity()
         user = User.query.get(int(user_id))
         
         if not user or not user.is_admin:
             return {"message": "Acceso denegado. Solo administradores."}, 403
         
-        # Contar usuarios
+        # User stats
         total_users = User.query.count()
         admin_count = User.query.filter_by(is_admin=True).count()
         users_with_player = User.query.filter(User.player_id.isnot(None)).count()
         
-        # Contar partidos
+        # Match stats
         total_matches = Match.query.count()
         completed_matches = Match.query.filter_by(is_completed=True).count()
         pending_matches = total_matches - completed_matches
         
-        # Contar jugadores
+        # Player stats
         total_players = Player.query.count()
         
-        # Lista de usuarios
+        # Build user list
         users_list = []
         for u in User.query.order_by(User.email).all():
             users_list.append({

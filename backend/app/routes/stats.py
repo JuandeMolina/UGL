@@ -2,15 +2,18 @@
 Module Name: Stats API
 Description: Absurd stats computation.
 Author: Juande Molina
+Copyright: (c) 2026 JuandeMolina
+License: MIT
 """
-from flask_restx import Namespace, Resource
-from flask_jwt_extended import jwt_required
-from sqlalchemy import func
-from collections import defaultdict
+
 import itertools
+from collections import defaultdict
+
+from flask_jwt_extended import jwt_required
+from flask_restx import Namespace, Resource
 
 from ..core import db
-from ..models import Match, Goal, MatchAssignment, Player
+from ..models import Goal, Match, MatchAssignment, Player
 
 ns = Namespace("stats", description="Estadísticas Absurdas")
 
@@ -38,14 +41,13 @@ class WeirdStatsList(Resource):
 
         matches_dict = {m.id: m for m in matches}
         
-        # Helper: Which team won?
+        # Helper: Determine match winner
         def get_winner(m):
             if m.pda_goals > m.atg_goals: return "PDA"
             if m.atg_goals > m.pda_goals: return "ATG"
             return "DRAW"
 
-        # 1. Piedra en el zapato
-        # Mejor jugador = más MVPs
+        # 1. Piedra en el zapato: Jugador con peor ratio de victoria con el mejor (MVP)
         mvp_counts = defaultdict(int)
         for m in matches:
             if m.mvp_id: mvp_counts[m.mvp_id] += 1
@@ -54,7 +56,6 @@ class WeirdStatsList(Resource):
         piedra_en_el_zapato = None
 
         if best_player_id:
-            # Matches of best player
             bp_assignments = [a for a in assignments if a.player_id == best_player_id]
             bp_matches = {a.match_id: a.team for a in bp_assignments}
 
@@ -70,7 +71,6 @@ class WeirdStatsList(Resource):
                         if get_winner(m) == a.team:
                             player_win_ratios[a.player_id]["wins"] += 1
             
-            # Min 3 matches with the best player
             valid_ratios = {pid: data["wins"] / data["total"] for pid, data in player_win_ratios.items() if data["total"] >= 3}
             if valid_ratios:
                 worst_pid = min(valid_ratios.keys(), key=lambda k: valid_ratios[k])
@@ -79,8 +79,7 @@ class WeirdStatsList(Resource):
                     "value": f"{round(valid_ratios[worst_pid] * 100)}% ({player_win_ratios[worst_pid]['wins']}/{player_win_ratios[worst_pid]['total']})"
                 }
 
-        # 2. Amuleto del portero (Juande y José Manuel)
-        # Find Juande and José Manuel
+        # 2. Amuleto del portero
         juande = next((p for p in players.values() if "juande" in p.name.lower()), None)
         jose_manuel = next((p for p in players.values() if "josé manuel" in p.name.lower() or "jose manuel" in p.name.lower() or "jose_manuel" in p.name.lower() or "de la torre" in p.name.lower()), None)
         
@@ -108,13 +107,13 @@ class WeirdStatsList(Resource):
                     "value": f"{round(valid_amuletos[best_amulet_pid], 1)} goles/partido"
                 }
 
-        # 3. Minuto caliente
+        # 3. Minuto de Oro
         minute_counts = defaultdict(int)
         for g in goals:
             minute_counts[g.minute] += 1
-        minuto_caliente = max(minute_counts.keys(), key=lambda k: minute_counts[k]) if minute_counts else None
+        peak_minute = max(minute_counts.keys(), key=lambda k: minute_counts[k]) if minute_counts else None
         
-        # 4. Franja caliente (10 mins)
+        # 4. Franja Caliente
         franja_counts = defaultdict(int)
         for g in goals:
             franja_idx = g.minute // 10
@@ -122,7 +121,7 @@ class WeirdStatsList(Resource):
         best_franja_idx = max(franja_counts.keys(), key=lambda k: franja_counts[k]) if franja_counts else None
         franja_caliente = f"{best_franja_idx*10} - {best_franja_idx*10 + 9}" if best_franja_idx is not None else None
 
-        # 5. Efecto siesta (Juande & José Manuel)
+        # 5. Efecto Siesta
         efecto_siesta = {}
         for portero in [juande, jose_manuel]:
             if not portero: continue
@@ -139,21 +138,21 @@ class WeirdStatsList(Resource):
             else:
                 efecto_siesta[portero.name] = {"minute": "N/A", "count": 0}
 
-        # 6. Rey del descuento (min >= 55)
+        # 6. Rey del descuento
         descuento_goals = defaultdict(int)
         for g in goals:
             if g.minute >= 55 and g.scoring_player_id:
                 descuento_goals[g.scoring_player_id] += 1
         rey_descuento_pid = max(descuento_goals.keys(), key=lambda k: descuento_goals[k]) if descuento_goals else None
 
-        # 7. Rey del inicio (min <= 5)
+        # 7. Rey del inicio
         inicio_goals = defaultdict(int)
         for g in goals:
             if g.minute <= 5 and g.scoring_player_id:
                 inicio_goals[g.scoring_player_id] += 1
         rey_inicio_pid = max(inicio_goals.keys(), key=lambda k: inicio_goals[k]) if inicio_goals else None
 
-        # 8. Abrelatas (1st goal of match)
+        # 8. Abrelatas
         abrelatas_counts = defaultdict(int)
         goals_by_match = defaultdict(list)
         for g in goals: goals_by_match[g.match_id].append(g)
@@ -165,7 +164,7 @@ class WeirdStatsList(Resource):
                     abrelatas_counts[first_g.scoring_player_id] += 1
         abrelatas_pid = max(abrelatas_counts.keys(), key=lambda k: abrelatas_counts[k]) if abrelatas_counts else None
 
-        # 9. Repartidor (assist different players)
+        # 9. Repartidor
         assists_targets = defaultdict(set)
         for g in goals:
             if g.assisting_player_id and g.scoring_player_id:
@@ -173,11 +172,10 @@ class WeirdStatsList(Resource):
         repartidor_counts = {pid: len(targets) for pid, targets in assists_targets.items()}
         repartidor_pid = max(repartidor_counts.keys(), key=lambda k: repartidor_counts[k]) if repartidor_counts else None
 
-        # 10. Tirador del carro (MVP losing)
+        # 10. Tirador del carro
         tirador_counts = defaultdict(int)
         for m in matches:
             if m.mvp_id:
-                # find team of MVP
                 a = next((a for a in assignments if a.match_id == m.id and a.player_id == m.mvp_id), None)
                 if a:
                     winner = get_winner(m)
@@ -195,7 +193,7 @@ class WeirdStatsList(Resource):
                 fantasmas[a.player_id] += (a.goals + a.assists)
         fantasma_pid = max(fantasmas.keys(), key=lambda k: fantasmas[k]) if fantasmas else None
 
-        # 12. Dupla de rendimiento (most goals assisted to each other)
+        # 12. Dupla de Rendimiento
         duplas_rendimiento = defaultdict(int)
         for g in goals:
             if g.scoring_player_id and g.assisting_player_id:
@@ -203,12 +201,11 @@ class WeirdStatsList(Resource):
                 duplas_rendimiento[pair] += 1
         best_rendimiento_pair = max(duplas_rendimiento.keys(), key=lambda k: duplas_rendimiento[k]) if duplas_rendimiento else None
 
-        # 13. Dupla de partidos (most wins together)
+        # 13. Dupla de Partidos
         duplas_wins = defaultdict(int)
         for m in matches:
             winner = get_winner(m)
             if winner == "DRAW": continue
-            # players in the winning team
             winning_players = [a.player_id for a in assignments if a.match_id == m.id and a.team == winner]
             for p1, p2 in itertools.combinations(winning_players, 2):
                 pair = tuple(sorted([p1, p2]))
@@ -222,7 +219,7 @@ class WeirdStatsList(Resource):
         result = [
             {
                 "title": "Piedra en el zapato",
-                "desc": "Peor porcentaje de victorias jugando con el MVP actual de la UGL",
+                "desc": "Peor % de victoria jugando con el actual MVP de la liga",
                 "value": piedra_en_el_zapato["player"] if piedra_en_el_zapato else "N/A",
                 "subvalue": subvalue_piedra
             }
@@ -235,28 +232,28 @@ class WeirdStatsList(Resource):
                 v = amuletos[portero.name]
                 result.append({
                     "title": f"Amuleto ({name_short})",
-                    "desc": f"Recibe menos goles al jugar con él",
+                    "desc": "Encaja menos goles cuando juega con él",
                     "value": v["player"],
                     "subvalue": v["value"]
                 })
             else:
                 result.append({
                     "title": f"Amuleto ({name_short})",
-                    "desc": f"Recibe menos goles al jugar con él",
+                    "desc": "Encaja menos goles cuando juega con él",
                     "value": "N/A",
-                    "subvalue": "Faltan datos"
+                    "subvalue": "Datos insuficientes"
                 })
 
         result.append({
-            "title": "Minuto Caliente",
+            "title": "Minuto de Oro",
             "desc": "Minuto exacto con más goles registrados",
-            "value": f"Minuto {minuto_caliente}" if minuto_caliente is not None else "N/A",
-            "subvalue": f"{minute_counts.get(minuto_caliente, 0)} goles" if minuto_caliente is not None else ""
+            "value": f"Minuto {peak_minute}" if peak_minute is not None else "N/A",
+            "subvalue": f"{minute_counts.get(peak_minute, 0)} goles" if peak_minute is not None else ""
         })
 
         result.append({
             "title": "Franja Caliente",
-            "desc": "Tramo de 10 minutos con más goles",
+            "desc": "Franja de 10 minutos con más goles",
             "value": f"Minutos {franja_caliente}" if franja_caliente else "N/A",
             "subvalue": f"{franja_counts.get(best_franja_idx, 0)} goles" if franja_caliente else ""
         })
@@ -267,8 +264,8 @@ class WeirdStatsList(Resource):
             efecto_html += f'<div style="margin-top:12px; display:flex; align-items:center; justify-content:space-between; width:100%; box-sizing:border-box; background:rgba(0,0,0,0.03); padding:12px 18px; border-radius:10px;"><div style="font-size:0.95rem; font-weight:800; color:var(--text-light); text-transform:uppercase; letter-spacing:0.5px;">{name_short}</div><div style="text-align:right;"><div style="font-size:1.3rem; font-weight:800; color:var(--text-dark)">Minuto {data["minute"]}</div><div style="font-size:0.85rem; color:var(--text-mid); font-weight:600">{data["count"]} goles</div></div></div>'
 
         result.append({
-            "title": "Efecto siesta",
-            "desc": "Minuto en el que cada portero encaja estadísticamente más goles. Su talón de Aquiles temporal.",
+            "title": "Efecto Siesta",
+            "desc": "Minuto en el que cada portero estadísticamente encaja más goles.",
             "value": "custom",
             "custom_html": efecto_html,
             "is_wide": True
@@ -276,21 +273,21 @@ class WeirdStatsList(Resource):
 
         result.append({
             "title": "Rey del descuento",
-            "desc": "Más goles anotados desde el minuto 55 hasta el final del partido",
+            "desc": "Más goles marcados del minuto 55 al final del partido",
             "value": get_player_name(rey_descuento_pid, players) if rey_descuento_pid else "N/A",
             "subvalue": f"{descuento_goals.get(rey_descuento_pid, 0)} goles" if rey_descuento_pid else ""
         })
 
         result.append({
             "title": "Rey del inicio",
-            "desc": "Más goles anotados en los primeros 5 minutos del partido",
+            "desc": "Más goles marcados en los primeros 5 minutos de partido",
             "value": get_player_name(rey_inicio_pid, players) if rey_inicio_pid else "N/A",
             "subvalue": f"{inicio_goals.get(rey_inicio_pid, 0)} goles" if rey_inicio_pid else ""
         })
 
         result.append({
             "title": "Abrelatas",
-            "desc": "Jugador que más veces anota el primer gol del partido",
+            "desc": "Jugador que más veces marca el primer gol del partido",
             "value": get_player_name(abrelatas_pid, players) if abrelatas_pid else "N/A",
             "subvalue": f"{abrelatas_counts.get(abrelatas_pid, 0)} veces" if abrelatas_pid else ""
         })
@@ -304,7 +301,7 @@ class WeirdStatsList(Resource):
 
             result.append({
                 "title": "Repartidor",
-                "desc": "Jugador que ha asistido a más compañeros diferentes",
+                "desc": "Jugador que ha asistido a más compañeros distintos",
                 "value": "custom",
                 "custom_html": repartidor_html,
                 "is_wide": True
@@ -312,21 +309,21 @@ class WeirdStatsList(Resource):
         else:
             result.append({
                 "title": "Repartidor",
-                "desc": "Jugador que ha asistido a más compañeros diferentes",
+                "desc": "Jugador que ha asistido a más compañeros distintos",
                 "value": "N/A",
                 "subvalue": ""
             })
 
         result.append({
             "title": "Tirador del carro",
-            "desc": "Más rondas de MVP en partidos perdidos",
+            "desc": "Más MVPs en partidos perdidos",
             "value": get_player_name(tirador_pid, players) if tirador_pid else "N/A",
             "subvalue": f"{tirador_counts.get(tirador_pid, 0)} veces" if tirador_pid else ""
         })
 
         result.append({
             "title": "MVP Fantasma",
-            "desc": "Mejores stats (G+A) fuera del top 3 de MVPs",
+            "desc": "Mejores cifras (G+A) fuera del top 3 de MVPs",
             "value": get_player_name(fantasma_pid, players) if fantasma_pid else "N/A",
             "subvalue": f"{fantasmas.get(fantasma_pid, 0)} (Goles + Asistencias)" if fantasma_pid else ""
         })
@@ -335,14 +332,14 @@ class WeirdStatsList(Resource):
             p1 = get_player_name(best_rendimiento_pair[0], players)
             p2 = get_player_name(best_rendimiento_pair[1], players)
             result.append({
-                "title": "Dupla de rendimiento",
+                "title": "Dupla de Rendimiento",
                 "desc": "Pareja con más goles conexionados (G+A entre ellos)",
                 "value": f"{p1} & {p2}",
                 "subvalue": f"{duplas_rendimiento[best_rendimiento_pair]} goles juntos"
             })
         else:
             result.append({
-                "title": "Dupla de rendimiento",
+                "title": "Dupla de Rendimiento",
                 "desc": "Pareja con más goles conexionados (G+A entre ellos)",
                 "value": "N/A",
                 "subvalue": ""
@@ -352,15 +349,15 @@ class WeirdStatsList(Resource):
             p1 = get_player_name(best_wins_pair[0], players)
             p2 = get_player_name(best_wins_pair[1], players)
             result.append({
-                "title": "Dupla de partidos",
-                "desc": "Pareja con más victorias jugando en el mismo equipo",
+                "title": "Dupla de Partidos",
+                "desc": "Pareja con más victorias compartiendo equipo",
                 "value": f"{p1} & {p2}",
                 "subvalue": f"{duplas_wins[best_wins_pair]} victorias"
             })
         else:
             result.append({
-                "title": "Dupla de partidos",
-                "desc": "Pareja con más victorias jugando en el mismo equipo",
+                "title": "Dupla de Partidos",
+                "desc": "Pareja con más victorias compartiendo equipo",
                 "value": "N/A",
                 "subvalue": ""
             })

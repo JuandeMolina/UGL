@@ -1,8 +1,6 @@
-#!/usr/bin/env python3
 """
-Application Entry Point
-Description:
-    This module serves as the entry point for the UGL Flask client application.
+Module Name: Application Entry Point
+Description: Direct runner for the frontend client application.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT

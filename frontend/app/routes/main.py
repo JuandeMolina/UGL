@@ -6,10 +6,10 @@ Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-from flask import Blueprint, render_template, redirect, url_for, abort, request, flash
-from flask_login import login_required, current_user
+from flask import Blueprint, abort, flash, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
-from ..utils import api_get, api_post, api_put, api_delete, API_BASE
+from ..utils import API_BASE, api_delete, api_get, api_post, api_put
 
 main = Blueprint("main", __name__)
 
@@ -28,16 +28,17 @@ def service_worker():
 @main.route("/dashboard")
 @login_required
 def dashboard():
+    """Renders the user dashboard with player stats and upcoming matches."""
     r_players, _ = api_get(f"{API_BASE}/players/")
     r_matches, _ = api_get(f"{API_BASE}/matches/")
 
     players = r_players.json() if r_players else []
     matches = r_matches.json() if r_matches else []
 
-    # Próximo partido (primero sin completar, en orden cronológico ascendente)
+    # Next match (first uncompleted, ascending chronological order)
     next_match = next((m for m in reversed(matches) if not m["is_completed"]), None)
 
-    # Las estadísticas ya vienen en el listado de jugadores (optimizado)
+    # Statistics are included in the player list (optimized)
     player_stats = []
     for p in players:
         stats = p.get("stats", {"goals": 0, "assists": 0, "wins": 0})
@@ -57,7 +58,7 @@ def dashboard():
     top_assisters = build_top("assists")
     top_winners = build_top("wins")
 
-    # Identificar el nombre del jugador para el saludo
+    # Identify player name for greeting
     display_name = current_user.email.split('@')[0]
     if current_user.player_id:
         curr_player = next((p for p in players if p['id'] == current_user.player_id), None)
@@ -83,6 +84,7 @@ def dashboard():
 @main.route("/players")
 @login_required
 def players():
+    """Renders the player list."""
     r, status = api_get(f"{API_BASE}/players/")
     if status == 401:
         return redirect(url_for("auth.login"))
@@ -94,6 +96,7 @@ def players():
 @main.route("/players/<int:player_id>")
 @login_required
 def player_detail(player_id):
+    """Renders a specific player's profile."""
     r, status = api_get(f"{API_BASE}/players/{player_id}")
     if status == 404:
         abort(404)
@@ -107,6 +110,7 @@ def player_detail(player_id):
 @main.route("/matches")
 @login_required
 def matches():
+    """Renders the match list."""
     r, status = api_get(f"{API_BASE}/matches/")
     if status == 401:
         return redirect(url_for("auth.login"))
@@ -118,29 +122,31 @@ def matches():
 @main.route("/matches/<int:match_id>")
 @login_required
 def match_detail(match_id):
+    """Renders details for a specific match, including timeline and lineups."""
     r, status = api_get(f"{API_BASE}/matches/{match_id}")
     if status != 200: abort(status)
 
     match_data = r.json()
     
-    # También necesitamos los goles para la cronología
+    # We also need goals for the timeline
     rg, _ = api_get(f"{API_BASE}/matches/{match_id}/goals")
     goals = rg.json() if rg else []
 
-    players = []
+    players_list = []
     if current_user.is_admin:
         rp, _ = api_get(f"{API_BASE}/players/")
-        if rp: players = rp.json()
+        if rp: players_list = rp.json()
 
     return render_template("match_detail.html", 
                            match=match_data, 
                            goals=goals, 
-                           players=players)
+                           players=players_list)
 
 
 @main.route("/matches/<int:match_id>/assign", methods=["POST"])
 @login_required
 def match_assign(match_id):
+    """Assigns a player to a specific team in a match (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
@@ -152,7 +158,7 @@ def match_assign(match_id):
     if status == 201:
         flash("Jugador asignado correctamente.", "success")
     else:
-        flash("Error al asignar jugador.", "error")
+        flash("Error al asignar el jugador.", "error")
 
     return redirect(url_for("main.match_detail", match_id=match_id))
 
@@ -160,14 +166,15 @@ def match_assign(match_id):
 @main.route("/matches/<int:match_id>/unassign/<int:assignment_id>", methods=["POST"])
 @login_required
 def match_unassign(match_id, assignment_id):
+    """Removes a player from a match team (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
     r, status = api_delete(f"{API_BASE}/matches/{match_id}/assignments/{assignment_id}")
     if status == 200:
-        flash("Jugador eliminado de la plantilla.", "success")
+        flash("Jugador eliminado de la convocatoria.", "success")
     else:
-        flash("Error al eliminar jugador.", "error")
+        flash("Error al eliminar el jugador.", "error")
 
     return redirect(url_for("main.match_detail", match_id=match_id))
 
@@ -175,11 +182,12 @@ def match_unassign(match_id, assignment_id):
 @main.route("/matches/<int:match_id>/update_stat/<int:assignment_id>/<string:stat_type>/<string:delta>", methods=["POST"])
 @login_required
 def match_update_stat(match_id, assignment_id, stat_type, delta):
+    """Updates individual player stats during a match (Admin only)."""
     delta = int(delta)
     if not current_user.is_admin:
         abort(403)
 
-    # Obtener datos actuales del partido para encontrar la asignación
+    # Get current match data to find the assignment
     r, _ = api_get(f"{API_BASE}/matches/{match_id}")
     if not r:
         return redirect(url_for("main.match_detail", match_id=match_id))
@@ -198,6 +206,7 @@ def match_update_stat(match_id, assignment_id, stat_type, delta):
 @main.route("/matches/<int:match_id>/complete", methods=["POST"])
 @login_required
 def match_complete(match_id):
+    """Finalizes a match and assigns the MVP (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
@@ -206,7 +215,7 @@ def match_complete(match_id):
     }
     r, status = api_post(f"{API_BASE}/matches/{match_id}/complete", data)
     if status == 200:
-        flash("¡Partido finalizado, marcador registrado y MVP asignado!", "success")
+        flash("¡Partido finalizado, estadísticas registradas y MVP asignado!", "success")
     else:
         flash("Error al finalizar el partido.", "error")
 
@@ -216,15 +225,16 @@ def match_complete(match_id):
 @main.route("/matches/<int:match_id>/reopen", methods=["POST"])
 @login_required
 def match_reopen(match_id):
+    """Reopens a finalized match for stat editing (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
     data = {"is_completed": False}
     r, status = api_put(f"{API_BASE}/matches/{match_id}", data)
     if status == 200:
-        flash("Acta reabierta. Ya puedes editar las estadísticas de nuevo.", "success")
+        flash("Convocatoria reabierta. Ya puedes editar estadísticas de nuevo.", "success")
     else:
-        flash("Error al reabrir el acta.", "error")
+        flash("Error al reabrir la convocatoria.", "error")
 
     return redirect(url_for("main.match_detail", match_id=match_id))
 
@@ -232,6 +242,7 @@ def match_reopen(match_id):
 @main.route("/players/<int:player_id>/edit", methods=["GET", "POST"])
 @login_required
 def player_edit(player_id):
+    """Edits a player's profile information (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
@@ -258,6 +269,7 @@ def player_edit(player_id):
 @main.route("/admin/matches/new", methods=["GET", "POST"])
 @login_required
 def admin_new_match():
+    """Creates a new match session (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
@@ -272,10 +284,10 @@ def admin_new_match():
         }
         r, status = api_post(f"{API_BASE}/matches/", data)
         if status == 201:
-            flash("¡Nueva jornada creada con éxito!", "success")
+            flash("¡Nueva jornada creada correctamente!", "success")
             return redirect(url_for("main.matches"))
         else:
-            flash("Error al crear la jornada.", "error")
+            flash("Error al crear el partido.", "error")
 
     return render_template("admin/match_form.html")
 
@@ -283,6 +295,7 @@ def admin_new_match():
 @main.route("/admin/matches/<int:match_id>/edit", methods=["GET", "POST"])
 @login_required
 def admin_edit_match(match_id):
+    """Edits basic match session settings (Admin only)."""
     if not current_user.is_admin:
         abort(403)
 
@@ -309,9 +322,11 @@ def admin_edit_match(match_id):
     
     return render_template("admin/match_edit.html", match=r.json())
 
+
 @main.route("/admin/stats")
 @login_required
 def admin_stats():
+    """Renders administrative database stats (Admin only)."""
     if not current_user.is_admin:
         abort(403)
     
@@ -319,12 +334,14 @@ def admin_stats():
     if status != 200 or not r:
         abort(503)
     
-    stats = r.json()
-    return render_template("admin/stats.html", stats=stats)
+    stats_data = r.json()
+    return render_template("admin/stats.html", stats=stats_data)
+
 
 @main.route("/weird_stats")
 @login_required
 def weird_stats():
+    """Renders the absurd stats dashboard."""
     r, status = api_get(f"{API_BASE}/stats/weird")
     if status == 401:
         return redirect(url_for("auth.login"))
@@ -332,11 +349,13 @@ def weird_stats():
         abort(503)
     return render_template("stats.html", stats=r.json())
 
+
 @main.route("/laboratory")
 @login_required
 def laboratory():
+    """Renders the advanced stats laboratory."""
     r, status = api_get(f"{API_BASE}/players/")
     if status != 200:
         abort(503)
-    players = sorted(r.json(), key=lambda x: x["name"])
-    return render_template("laboratory.html", players=players)
+    players_data = sorted(r.json(), key=lambda x: x["name"])
+    return render_template("laboratory.html", players=players_data)

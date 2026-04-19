@@ -1,7 +1,6 @@
 """
 Module Name: Error Handlers
-Description:
-    Registers error handlers for the Flask client application.
+Description: Registers global error handlers for the frontend application templates.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
@@ -11,6 +10,9 @@ from flask import render_template
 
 
 def register_error_handlers(app):
+    """
+    Hooks custom error templates for standard HTTP error codes.
+    """
     @app.errorhandler(401)
     def unauthorized(e):
         return render_template("errors/401.html"), 401

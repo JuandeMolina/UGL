@@ -1,17 +1,17 @@
 """
 Module Name: Push Notifications Namespace
-Description: Endpoints to subscribe and unsubscribe users to push notifications.
+Description: Endpoints to manage user subscriptions for web push notifications.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
 from flask import request
+from flask_jwt_extended import get_jwt_identity, jwt_required
 from flask_restx import Namespace, Resource, fields
-from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..models import PushSubscription, User
 from ..core import db
+from ..models import PushSubscription, User
 
 ns = Namespace("push", description="Notificaciones Push")
 
@@ -31,18 +31,18 @@ class Subscribe(Resource):
     @jwt_required()
     @ns.expect(subscription_model)
     def post(self):
-        """Suscribe al usuario actual a notificaciones push."""
-        user_id = get_jwt_identity() # Esto devuelve el ID (ej: "1")
-        user = User.query.get(int(user_id)) # Buscamos por ID, no por email
+        """Subscribes the current user to push notifications."""
+        user_id = get_jwt_identity()
+        user = User.query.get(int(user_id))
 
         if not user:
-            return {"message": "Usuario no encontrado en la DB."}, 404
+            return {"message": "Usuario no encontrado."}, 404
 
         data = ns.payload
         endpoint = data["endpoint"]
         keys = data["keys"]
         
-        # Evitar duplicados
+        # Prevent duplicate endpoints
         existing = PushSubscription.query.filter_by(endpoint=endpoint).first()
         if existing:
             existing.user_id = user.id
@@ -64,7 +64,7 @@ class Subscribe(Resource):
 class Unsubscribe(Resource):
     @jwt_required()
     def post(self):
-        """Elimina una suscripción específica."""
+        """Removes a specific push notification subscription."""
         data = request.json
         endpoint = data.get("endpoint")
         if not endpoint:

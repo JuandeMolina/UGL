@@ -1,16 +1,16 @@
 """
 Module Name: Players Namespace
-Description:
-    Endpoints for player listing and individual player stats.
+Description: Endpoints for listing players and retrieving detailed individual statistics.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-from flask_restx import Namespace, Resource
 from flask_jwt_extended import jwt_required
+from flask_restx import Namespace, Resource
 
-from ..models import Player, MatchAssignment, Match
+from ..core import db
+from ..models import Match, MatchAssignment, Player
 
 ns = Namespace("players", description="Jugadores")
 
@@ -19,16 +19,15 @@ ns = Namespace("players", description="Jugadores")
 class PlayerList(Resource):
     @jwt_required()
     def get(self):
-        """Lista todos los jugadores con estadísticas avanzadas."""
+        """Lists all players with advanced performance statistics."""
         players = Player.query.order_by(Player.name).all()
 
-        from ..core import db
-        # Obtener datos de partidos completados
+        # Get data from completed matches
         completed_matches = db.session.query(Match).filter(Match.is_completed == True).all()
         match_ids = [m.id for m in completed_matches]
         assignments = db.session.query(MatchAssignment).filter(MatchAssignment.match_id.in_(match_ids)).all() if match_ids else []
 
-        # Mapa de estadísticas inicial
+        # Initial stats map
         stats_map = {
             p.id: {
                 "goals": 0,
@@ -41,12 +40,12 @@ class PlayerList(Resource):
             for p in players
         }
 
-        # Conteo de MVPs
+        # Count MVPs
         for m in completed_matches:
             if m.mvp_id and m.mvp_id in stats_map:
                 stats_map[m.mvp_id]["mvp_count"] += 1
 
-        # Procesar asignaciones
+        # Process assignments
         match_map = {m.id: m for m in completed_matches}
         for a in assignments:
             pid = a.player_id
@@ -61,13 +60,13 @@ class PlayerList(Resource):
             if not m:
                 continue
 
-            # Victorias
+            # Win count
             if a.team == "PDA" and m.pda_goals > m.atg_goals:
                 stats_map[pid]["wins"] += 1
             elif a.team == "ATG" and m.atg_goals > m.pda_goals:
                 stats_map[pid]["wins"] += 1
 
-            # Goles encajados (lógica específica para porteros solicitada)
+            # Goals conceded (goalkeepers only)
             p = next((p for p in players if p.id == pid), None)
             if p and p.is_goalkeeper:
                 if a.team == "PDA":
@@ -80,7 +79,7 @@ class PlayerList(Resource):
             s = stats_map[p.id]
             mp = s["matches_played"]
             
-            # Cálculos adicionales
+            # Derived metrics
             goals_per_match = round(s["goals"] / mp, 2) if mp > 0 else 0.0
             ga_per_match = round((s["goals"] + s["assists"]) / mp, 2) if mp > 0 else 0.0
             win_pct = round((s["wins"] / mp) * 100, 1) if mp > 0 else 0.0
@@ -108,15 +107,14 @@ class PlayerList(Resource):
 class PlayerDetail(Resource):
     @jwt_required()
     def get(self, player_id):
-        """Devuelve el perfil y estadísticas detalladas de un jugador."""
+        """Returns the profile and detailed statistics for a specific player."""
         player = Player.query.get_or_404(player_id)
         
-        # Reutilizamos la lógica de estadísticas pero filtrada para este jugador
-        from ..core import db
+        # Statistics logic filtered for this player
         completed_matches = db.session.query(Match).filter(Match.is_completed == True).all()
         assignments = MatchAssignment.query.filter_by(player_id=player_id).all()
         
-        # Solo asignaciones de partidos completados para las estadísticas de rendimiento
+        # Filter assignments for completed matches only
         completed_match_ids = {m.id for m in completed_matches}
         comp_assignments = [a for a in assignments if a.match_id in completed_match_ids]
 
@@ -167,7 +165,7 @@ class PlayerDetail(Resource):
 
     @jwt_required()
     def put(self, player_id):
-        """Actualiza el perfil de un jugador (Admin)."""
+        """Updates a player's profile (Admin only)."""
         player = Player.query.get_or_404(player_id)
         data = ns.payload
         
@@ -178,6 +176,5 @@ class PlayerDetail(Resource):
         if "photo_url" in data:
             player.photo_url = data["photo_url"]
             
-        from ..core import db
         db.session.commit()
         return {"message": "Perfil actualizado correctamente."}, 200

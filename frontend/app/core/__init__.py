@@ -6,8 +6,8 @@ Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-import os
 import logging
+import os
 from pathlib import Path
 
 from flask import Flask
@@ -25,7 +25,9 @@ MONTHS_ES = {
 
 
 def create_app(config_class=None):
-    """Application factory pattern."""
+    """
+    Application factory for the frontend client.
+    """
     BASE_DIR = Path(__file__).resolve().parent.parent.parent
     app = Flask(
         __name__,
@@ -37,7 +39,7 @@ def create_app(config_class=None):
     if config_class:
         app.config.from_object(config_class)
     else:
-        import config
+        from ... import config
         app.config.from_object(config.Config)
 
     # Initialize extensions
@@ -48,23 +50,24 @@ def create_app(config_class=None):
     # Custom Jinja2 filters
     @app.template_filter("month_name")
     def month_name_filter(month_str: str) -> str:
+        """Translates month number to short Spanish name."""
         return MONTHS_ES.get(str(month_str).zfill(2), month_str)
 
     @app.template_filter("datetime_es")
     def datetime_es_filter(dt_str: str) -> str:
-        """Convierte 'YYYY-MM-DD...' a 'DD/MM/YYYY'"""
+        """Converts ISO 'YYYY-MM-DD...' to Spanish 'DD/MM/YYYY'."""
         if not dt_str or len(dt_str) < 10:
             return dt_str
         try:
             date_part = dt_str[:10]
             year, month, day = date_part.split("-")
             return f"{day}/{month}/{year}"
-        except:
+        except Exception:
             return dt_str
 
     # Register blueprints
-    from ..routes.main import main
     from ..routes.auth import auth
+    from ..routes.main import main
 
     app.register_blueprint(main)
     app.register_blueprint(auth, url_prefix="/auth")
@@ -75,16 +78,17 @@ def create_app(config_class=None):
 
     @app.context_processor
     def inject_vars():
-        # Detectamos si el servidor es el monolito (puerto 5000) o producción
-        # Si usamos /api, el navegador llamará al mismo servidor que sirve la web
+        """Injects global variables into all templates."""
         return dict(
             API_BASE="/api", 
             VAPID_PUBLIC_KEY=app.config.get("VAPID_PUBLIC_KEY")
         )
 
-    # User loader — valida el JWT contra el API del backend
     @login_manager.user_loader
     def load_user(user_id):
+        """
+        User loader for Flask-Login. Validates the JWT against the backend.
+        """
         from flask import session
         from ..utils import api_get
         
@@ -92,7 +96,7 @@ def create_app(config_class=None):
         if not token:
             return None
 
-        # api_get automatically handles the internal client routing!
+        # Call backend to verify identity
         r, status = api_get(f"{API_BASE}/auth/me", handle_401=False)
         if status != 200 or r is None:
             return None
@@ -104,13 +108,13 @@ def create_app(config_class=None):
 
 
 def setup_logging(app):
+    """
+    Configures logging for the frontend application.
+    """
     if not app.debug:
         log_dir = Path(__file__).resolve().parent.parent.parent / "logs"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "client.log"
-
-        if not os.path.exists(log_dir):
-            os.makedirs(log_dir)
 
         file_handler = logging.FileHandler(log_file)
         file_handler.setLevel(logging.WARNING)
