@@ -1,7 +1,7 @@
 """
 Module Name: Database Models
 Description:
-    Database models for the UGL API server: User, Player, Match, MatchAssignment.
+    Database models for the UGL API server.
 Author: Juande Molina
 Copyright: (c) 2026 JuandeMolina
 License: MIT
@@ -14,6 +14,7 @@ from .match_assignment import MatchAssignment
 from .push_subscription import PushSubscription
 from .match_confirmation import MatchConfirmation
 from .goal import Goal
+from .award import PlayerAward
  
 __all__ = [
     "User", 
@@ -22,6 +23,7 @@ __all__ = [
     "MatchAssignment", 
     "PushSubscription", 
     "MatchConfirmation", 
-    "Goal"
+    "Goal",
+    "PlayerAward"
 ]
  

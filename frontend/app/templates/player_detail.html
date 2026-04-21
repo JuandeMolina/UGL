@@ -39,6 +39,21 @@
         {% endif %}
     </div>
 
+    {# ── Palmarés (Awards) ────────────────────────────────────────────── #}
+    {% if player.awards %}
+    <div class="anim-slide-up anim-delay-1" style="margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap;">
+        {% for award in player.awards %}
+        <div class="award-badge">
+            <span class="award-icon">{{ award.icon or '🏆' }}</span>
+            <span class="award-title">{{ award.title }}</span>
+            {% if award.gala %}
+            <span class="award-year">{{ award.gala }}</span>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     {# ── Descripción ─────────────────────────────────────────────────── #}
     {% if player.description %}
     <div class="card anim-slide-up anim-delay-1" style="margin-top: 14px; padding: 20px 24px;">
@@ -156,18 +171,18 @@
             {# Barra de progreso W/D/L #}
             {% set total = player.stats.wins + player.stats.draws + player.stats.losses %}
             {% if total > 0 %}
-            <div class="wdl-bar" style="margin-top: 14px;">
                 {% set w_pct = (player.stats.wins / total * 100) | round(1) %}
                 {% set d_pct = (player.stats.draws / total * 100) | round(1) %}
                 {% set l_pct = (player.stats.losses / total * 100) | round(1) %}
-                {% if w_pct > 0 %}
-                <div style="width: {{ w_pct }}%; background: var(--green);" title="Victorias {{ w_pct }}%"></div>
+                <div class="wdl-bar" style="margin-top: 14px; --w-pct: {{ w_pct }}%; --d-pct: {{ d_pct }}%; --l-pct: {{ l_pct }}%;">
+                    {% if w_pct > 0 %}
+                <div style="width: var(--w-pct); background: var(--green);" title="Victorias {{ w_pct }}%"></div>
                 {% endif %}
                 {% if d_pct > 0 %}
-                <div style="width: {{ d_pct }}%; background: #94a3b8;" title="Empates {{ d_pct }}%"></div>
+                <div style="width: var(--d-pct); background: #94a3b8;" title="Empates {{ d_pct }}%"></div>
                 {% endif %}
                 {% if l_pct > 0 %}
-                <div style="width: {{ l_pct }}%; background: #f87171;" title="Derrotas {{ l_pct }}%"></div>
+                <div style="width: var(--l-pct); background: #f87171;" title="Derrotas {{ l_pct }}%"></div>
                 {% endif %}
             </div>
             {% endif %}
@@ -230,6 +245,44 @@
         display: inline-flex;
         align-items: center;
         gap: 4px;
+    }
+
+    .award-badge {
+        background: #fff;
+        border: 1px solid var(--border);
+        padding: 6px 14px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.2s, box-shadow 0.2s;
+        cursor: default;
+    }
+
+    .award-badge:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+        border-color: var(--blue);
+    }
+
+    .award-icon {
+        font-size: 1.2rem;
+    }
+
+    .award-title {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: var(--text-dark);
+    }
+
+    .award-year {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        background: rgba(0,0,0,0.04);
+        padding: 1px 6px;
+        border-radius: 4px;
+        margin-left: 4px;
     }
 
     .player-badge-gk {

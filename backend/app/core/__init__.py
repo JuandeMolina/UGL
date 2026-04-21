@@ -77,6 +77,7 @@ def create_app(config_class=None):
         from ..models.match_assignment import MatchAssignment
         from ..models.match_confirmation import MatchConfirmation
         from ..models.player import Player
+        from ..models.award import PlayerAward
         from ..models.push_subscription import PushSubscription
         from ..models.user import User
         db.create_all()

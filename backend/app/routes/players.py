@@ -7,12 +7,18 @@ License: MIT
 """
 
 from flask_jwt_extended import jwt_required
-from flask_restx import Namespace, Resource
+from flask_restx import Namespace, Resource, fields
 
 from ..core import db
-from ..models import Match, MatchAssignment, Player
+from ..models import Match, MatchAssignment, Player, PlayerAward
 
 ns = Namespace("players", description="Jugadores")
+
+award_model = ns.model("Award", {
+    "title": fields.String(required=True, description="Nombre del premio"),
+    "icon": fields.String(description="Emoji representante"),
+    "gala": fields.String(description="Año de la gala")
+})
 
 
 @ns.route("/")
@@ -161,6 +167,14 @@ class PlayerDetail(Resource):
                 "ga_per_match": round((goals + assists) / matches_played, 2) if matches_played > 0 else 0.0,
                 "win_percentage": round((wins / matches_played) * 100, 1) if matches_played > 0 else 0.0,
             },
+            "awards": [
+                {
+                    "id": a.id,
+                    "title": a.title,
+                    "icon": a.icon,
+                    "gala": a.gala
+                } for a in player.awards
+            ]
         }, 200
 
     @jwt_required()
@@ -178,3 +192,32 @@ class PlayerDetail(Resource):
             
         db.session.commit()
         return {"message": "Perfil actualizado correctamente."}, 200
+
+@ns.route("/<int:player_id>/awards")
+class AwardList(Resource):
+    @jwt_required()
+    @ns.expect(award_model)
+    def post(self, player_id):
+        """Adds a new award to a player (Admin only)."""
+        player = Player.query.get_or_404(player_id)
+        data = ns.payload
+        
+        award = PlayerAward(
+            player_id=player_id,
+            title=data.get("title"),
+            icon=data.get("icon", "🏆"),
+            gala=data.get("gala")
+        )
+        db.session.add(award)
+        db.session.commit()
+        return {"id": award.id}, 201
+
+@ns.route("/awards/<int:award_id>")
+class AwardDetail(Resource):
+    @jwt_required()
+    def delete(self, award_id):
+        """Removes an award (Admin only)."""
+        award = PlayerAward.query.get_or_404(award_id)
+        db.session.delete(award)
+        db.session.commit()
+        return {"message": "Premio eliminado correctamente."}, 200

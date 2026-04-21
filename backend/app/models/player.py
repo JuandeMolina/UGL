@@ -22,6 +22,9 @@ class Player(db.Model):
     assignments = db.relationship(
         "MatchAssignment", back_populates="player", cascade="all, delete-orphan"
     )
+    awards = db.relationship(
+        "PlayerAward", back_populates="player", cascade="all, delete-orphan"
+    )
 
     def __repr__(self):
         return f"<Player {self.name}>"

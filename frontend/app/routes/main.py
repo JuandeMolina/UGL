@@ -266,6 +266,43 @@ def player_edit(player_id):
     return render_template("admin/player_edit.html", player=r.json())
 
 
+@main.route("/players/<int:player_id>/awards/new", methods=["POST"])
+@login_required
+def player_award_new(player_id):
+    """Adds a new award to a player (Admin only)."""
+    if not current_user.is_admin:
+        abort(403)
+        
+    data = {
+        "title": request.form.get("title"),
+        "icon": request.form.get("icon") or "🏆",
+        "gala": request.form.get("gala")
+    }
+    r, status = api_post(f"{API_BASE}/players/{player_id}/awards", data)
+    if status == 201:
+        flash("Premio añadido correctamente.", "success")
+    else:
+        flash("Error al añadir el premio.", "error")
+        
+    return redirect(url_for("main.player_edit", player_id=player_id))
+
+
+@main.route("/players/<int:player_id>/awards/<int:award_id>/delete", methods=["POST"])
+@login_required
+def player_award_delete(player_id, award_id):
+    """Removes an award from a player (Admin only)."""
+    if not current_user.is_admin:
+        abort(403)
+        
+    r, status = api_delete(f"{API_BASE}/players/awards/{award_id}")
+    if status == 200:
+        flash("Premio eliminado correctamente.", "success")
+    else:
+        flash("Error al eliminar el premio.", "error")
+        
+    return redirect(url_for("main.player_edit", player_id=player_id))
+
+
 @main.route("/admin/matches/new", methods=["GET", "POST"])
 @login_required
 def admin_new_match():
