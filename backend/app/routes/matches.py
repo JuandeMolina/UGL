@@ -23,6 +23,7 @@ match_model = ns.model(
         "cost": fields.Float(description="Coste del partido"),
         "pda_kit_color": fields.String(description="Color equipación PDA"),
         "atg_kit_color": fields.String(description="Color equipación ATG"),
+        "ai_justification": fields.String(description="Justificación detallada de la IA para la convocatoria"),
     },
 )
 
@@ -216,6 +217,7 @@ class MatchDetail(Resource):
             ],
             "waiting_list": waiting_list,
             "user_confirmation": user_confirmation,
+            "ai_justification": match.ai_justification,
         }, 200
 
     @jwt_required()
@@ -242,6 +244,8 @@ class MatchDetail(Resource):
             match.playing_now = bool(data["playing_now"])
         if "is_completed" in data:
             match.is_completed = bool(data["is_completed"])
+        if "ai_justification" in data:
+            match.ai_justification = data["ai_justification"]
             
         db.session.commit()
         return {"message": "Partido actualizado correctamente."}, 200

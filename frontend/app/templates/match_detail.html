@@ -255,6 +255,79 @@
     {% endif %}
 
     {# ── Panel de Gestión (Admin) ──────────────────────────────────────── #}
+
+    {# ── Sección del Entrenador Virtual (IA) - Visible para TODOS ── #}
+    {% if match.ai_justification or current_user.is_admin %}
+    <div class="card anim-slide-up"
+        style="margin-top: 20px; padding: 22px; border: 1px solid rgba(59, 130, 246, 0.2); background: linear-gradient(145deg, rgba(255,255,255,0.9), rgba(240, 246, 255, 0.9));">
+
+        <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+                <span style="font-size: 1.5rem;">🤖</span>
+                <h3
+                    style="font-size: 1.05rem; margin: 0; background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">
+                    Entrenador Virtual</h3>
+            </div>
+            {% if current_user.is_admin and not match.is_completed %}
+            <button id="btn-ai" onclick="getAISuggestion()" class="btn btn-ghost btn-sm"
+                style="font-size: 0.7rem; padding: 5px 10px;">
+                {% if match.ai_justification %}Re-generar con IA{% else %}Generar con IA{% endif %}
+            </button>
+            {% endif %}
+        </div>
+
+        {# Justificación de la IA #}
+        <div id="ai-content" class="{% if not match.ai_justification %}d-none{% endif %}">
+            <p id="ai-justification"
+                style="font-size: 0.9rem; line-height: 1.5; color: var(--text-dark); background: white; padding: 15px; border-radius: 12px; border: 1px solid var(--border);">
+                {{ match.ai_justification }}
+            </p>
+
+            {# Desplegable de criterios para los usuarios #}
+            <details style="margin-top: 15px; font-size: 0.8rem; color: var(--text-muted); cursor: pointer;">
+                <summary style="font-weight: 700; color: var(--blue); margin-bottom: 8px;">
+                    ¿Cómo se han formado estos equipos? Ver criterios de la IA
+                </summary>
+                <div style="padding: 10px 15px; background: rgba(0,0,0,0.02); border-radius: 8px; margin-top: 5px;">
+                    <ul style="padding-left: 15px; display: flex; flex-direction: column; gap: 5px;">
+                        <li><strong>Porteros Fijos:</strong> Juande (PDA) y José Manuel (ATG) nunca rotan.</li>
+                        <li><strong>Balance de Nivel:</strong> Se analiza el % de victorias histórico y
+                            goles/asistencias de cada jugador confirmado.</li>
+                        <li><strong>Factor de Compensación:</strong> Si un equipo tiene un jugador menos (impar), la IA
+                            le asigna jugadores con estadísticas ligeramente superiores.</li>
+                        <li><strong>Afinidad Táctica:</strong> Se tienen en cuenta las "conexiones" (goles marcados
+                            gracias a la asistencia de otro).</li>
+                        <li><strong>Prioridad de Rotación:</strong> El modelo penaliza las parejas que han jugado juntas
+                            muchas veces recientemente para obligar a que todos jueguen con todos.</li>
+                        <li><strong>Pequeño margen de azar:</strong> Para evitar que los equipos sean siempre idénticos
+                            en condiciones similares.</li>
+                    </ul>
+                </div>
+            </details>
+        </div>
+
+        {# Bloque de control (Solo Admin) #}
+        {% if current_user.is_admin and not match.is_completed %}
+        <div id="ai-admin-controls" class="d-none"
+            style="margin-top: 15px; border-top: 1px dashed var(--border); padding-top: 15px;">
+            <p style="font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 10px;">VISTA PREVIA
+                DE CONVOCATORIA:</p>
+            <div class="teams-cols" style="gap: 10px; margin-bottom: 15px;">
+                <div id="ai-pda"
+                    style="font-size: 0.8rem; background: rgba(59, 130, 246, 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(59, 130, 246, 0.1);">
+                </div>
+                <div id="ai-atg"
+                    style="font-size: 0.8rem; background: rgba(16, 185, 129, 0.05); padding: 10px; border-radius: 8px; border: 1px solid rgba(16, 185, 129, 0.1);">
+                </div>
+            </div>
+            <button onclick="applyAICall()" class="btn btn-primary btn-sm w-full">Confirmar y publicar esta
+                convocatoria</button>
+        </div>
+        {% endif %}
+
+    </div>
+    {% endif %}
+
     {% if current_user.is_admin and not match.is_completed %}
     <div class="card anim-slide-up anim-delay-3" style="margin-top: 20px; padding: 22px;">
         <p class="section-label" style="margin-bottom: 16px;">Administrar Plantillas</p>
@@ -921,6 +994,70 @@
             headers: { 'Authorization': 'Bearer {{ session.get("jwt") }}' }
         });
         if (res.ok) window.location.reload();
+    }
+
+    // 7. Sugerencia de equipos con IA
+    let lastAISuggestion = null;
+
+    async function getAISuggestion() {
+        const btn = document.getElementById('btn-ai');
+        btn.innerText = "Consultando a la IA... ⏳";
+        btn.disabled = true;
+
+        try {
+            const res = await fetch(`/api/ai/suggest-teams/{{ match.id }}`, {
+                headers: { 'Authorization': 'Bearer {{ session.get("jwt") }}' }
+            });
+            const data = await res.json();
+
+            lastAISuggestion = data;
+
+            document.getElementById('ai-pda').innerHTML = "<strong>PDA:</strong><br>" + data.pda_names.join("<br>");
+            document.getElementById('ai-atg').innerHTML = "<strong>ATG:</strong><br>" + data.atg_names.join("<br>");
+            document.getElementById('ai-justification').innerText = data.justification;
+
+            // Mostrar bloques
+            document.getElementById('ai-content').classList.remove('d-none');
+            const adminControls = document.getElementById('ai-admin-controls');
+            if (adminControls) adminControls.classList.remove('d-none');
+        } catch (e) {
+            alert("Error al invocar la IA.");
+        } finally {
+            btn.innerText = "Re-generar equipos con IA";
+            btn.disabled = false;
+        }
+    }
+
+    async function applyAICall() {
+        if (!lastAISuggestion || !confirm("Se aplicará la convocatoria de la IA. ¿Continuar?")) return;
+
+        const applyTeam = async (ids, teamName) => {
+            for (const pid of ids) {
+                await fetch(`/api/matches/{{ match.id }}/assignments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': 'Bearer {{ session.get("jwt") }}'
+                    },
+                    body: JSON.stringify({ player_id: pid, team: teamName })
+                });
+            }
+        };
+
+        // Guardar la justificación en el partido
+        await fetch(`/api/matches/{{ match.id }}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer {{ session.get("jwt") }}'
+            },
+            body: JSON.stringify({ ai_justification: lastAISuggestion.justification })
+        });
+
+        await applyTeam(lastAISuggestion.pda, "PDA");
+        await applyTeam(lastAISuggestion.atg, "ATG");
+
+        window.location.reload();
     }
 </script>
 {% endblock %}

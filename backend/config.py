@@ -23,6 +23,7 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "sqlite:///" + str(BASE_DIR / "data" / "app.db")
     )
+    GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "AIzaSyCFVkVl-sPropph7Mk2kq8u_UA2OS9t_QI")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     DEBUG = False
     TESTING = False

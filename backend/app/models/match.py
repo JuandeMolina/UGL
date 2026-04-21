@@ -19,6 +19,7 @@ class Match(db.Model):
     kick_off_actual_time: datetime = db.Column(db.DateTime, nullable=True)
     location: str = db.Column(db.String(50), nullable=False)
     cost: float = db.Column(db.Float, nullable=False)
+    ai_justification = db.Column(db.Text, nullable=True)
     
     # Global score columns (synchronized by sync_match_goals)
     pda_goals: int = db.Column(db.Integer, default=0)

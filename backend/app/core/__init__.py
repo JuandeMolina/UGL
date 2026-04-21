@@ -89,6 +89,7 @@ def create_app(config_class=None):
     from ..routes.players import ns as players_ns
     from ..routes.push import ns as push_ns
     from ..routes.stats import ns as stats_ns
+    from ..routes.ai import ns as ai_ns
 
     api.namespaces.clear() # Avoid duplicates during reloads
     api.add_namespace(auth_ns)
@@ -97,6 +98,7 @@ def create_app(config_class=None):
     api.add_namespace(push_ns)
     api.add_namespace(stats_ns)
     api.add_namespace(laboratory_ns)
+    api.add_namespace(ai_ns)
     api.init_app(app)
 
     @app.errorhandler(429)
