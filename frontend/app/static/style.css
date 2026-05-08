@@ -48,7 +48,8 @@
 
 html {
     scroll-behavior: smooth;
-    background-color: #f0f6ff; /* Color sólido para el rebote de overscroll en iOS */
+    background-color: #f0f6ff;
+    /* Color sólido para el rebote de overscroll en iOS */
 }
 
 body {
@@ -1770,7 +1771,7 @@ tr.self-row .row-actions button {
         padding: 0;
         width: 100%;
     }
-    
+
     .navbar-nav li {
         flex: 1;
         display: flex;
@@ -1879,4 +1880,62 @@ html {
 
 .timeline-content {
     flex: 1;
+}
+
+/* ── Toasts (notificaciones flash) ────────────────────────────── */
+.toast {
+    padding: 16px 20px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    animation: slideDown 0.3s ease-out;
+    border: 1px solid;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Error - Rojo */
+.toast-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: #991b1b;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+/* Success - Verde */
+.toast-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: #065f46;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+/* Warning - Naranja */
+.toast-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+/* Info - Azul */
+.toast-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: #1e3a8a;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.toast-icon {
+    font-size: 1.2rem;
+    flex-shrink: 0;
 }

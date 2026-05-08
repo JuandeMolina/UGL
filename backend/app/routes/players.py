@@ -6,7 +6,8 @@ Copyright: (c) 2026 JuandeMolina
 License: MIT
 """
 
-from flask_jwt_extended import jwt_required
+from flask import request
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from flask_restx import Namespace, Resource, fields
 
 from ..core import db
@@ -26,7 +27,10 @@ class PlayerList(Resource):
     @jwt_required()
     def get(self):
         """Lists all players with advanced performance statistics."""
-        players = Player.query.order_by(Player.name).all()
+        include_guests = request.args.get("include_guests") == "true"
+
+        if include_guests: players = Player.query.order_by(Player.name).all()
+        else: players = Player.query.filter_by(is_guest=False).order_by(Player.name).all()
 
         # Get data from completed matches
         completed_matches = db.session.query(Match).filter(Match.is_completed == True).all()
@@ -221,3 +225,33 @@ class AwardDetail(Resource):
         db.session.delete(award)
         db.session.commit()
         return {"message": "Premio eliminado correctamente."}, 200
+
+@ns.route("/guests")
+class GuestCreate(Resource):
+    @jwt_required()
+    def post(self):
+        """Crea un jugador invitado y opcionalmente lo confirma para un partido."""
+        from ..models import MatchConfirmation # Importación local
+        data = ns.payload
+        name = data.get("name")
+        match_id = data.get("match_id") # Recibimos el ID del partido
+
+        if not name:
+            return {"message": "El nombre es obligatorio"}, 400
+
+        # 1. Crear el jugador
+        new_guest = Player(name=name, is_guest=True, is_goalkeeper=False)
+        db.session.add(new_guest)
+        db.session.flush() # Para obtener el ID antes del commit
+
+        # 2. Si hay match_id, crear confirmación de asistencia automática
+        if match_id:
+            conf = MatchConfirmation(
+                match_id=match_id, 
+                player_id=new_guest.id, 
+                will_attend=True
+            )
+            db.session.add(conf)
+
+        db.session.commit()
+        return {"id": new_guest.id, "name": new_guest.name}, 201

@@ -134,7 +134,7 @@ def match_detail(match_id):
 
     players_list = []
     if current_user.is_admin:
-        rp, _ = api_get(f"{API_BASE}/players/")
+        rp, _ = api_get(f"{API_BASE}/players/?include_guests=true")
         if rp: players_list = rp.json()
 
     return render_template("match_detail.html", 

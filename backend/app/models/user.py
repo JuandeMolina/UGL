@@ -18,6 +18,7 @@ class User(db.Model):
     password_hash: str = db.Column(db.String(256), nullable=False)
     player_id: int = db.Column(db.Integer, db.ForeignKey("player.id"), nullable=True)
     is_admin: bool = db.Column(db.Boolean, default=False)
+    is_active: bool = db.Column(db.Boolean, default=True, nullable=False)
 
     # Relationships
     player = db.relationship("Player", backref="user", uselist=False)

@@ -35,6 +35,9 @@ class Login(Resource):
         user = User.query.filter_by(email=email).first()
         if not user or not user.check_password(password):
             return {"message": "Credenciales incorrectas."}, 401
+        
+        if not user.is_active:
+            return {"message": "Tu cuenta ha sido temporalmente suspendida."}, 403
 
         token = create_access_token(identity=str(user.id))
         return {

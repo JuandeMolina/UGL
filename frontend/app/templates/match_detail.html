@@ -328,6 +328,24 @@
     </div>
     {% endif %}
 
+    {# ── Tarjeta Independiente: Crear Invitado (Solo Admin) ──────────────── #}
+    {% if current_user.is_admin and not match.is_completed and not match.kick_off_actual_time %}
+    <div class="card anim-slide-up"
+        style="margin-top: 20px; padding: 22px; border: 1px solid var(--blue); background: rgba(59, 130, 246, 0.03);">
+        <p class="section-label" style="color: var(--blue); margin-bottom: 12px;">Fichaje de Invitado 👤</p>
+        <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+            <input type="text" id="guest-name-field" placeholder="Nombre del invitado..." class="form-select"
+                style="flex: 1; min-width: 200px; height: 42px;">
+            <button onclick="createGuestOnly()" class="btn btn-primary btn-sm"
+                style="padding: 0 25px; height: 42px;">Registrar en Lista de Espera</button>
+        </div>
+        <p style="font-size: 0.75rem; color: var(--text-light); margin-top: 10px;">
+            El jugador aparecerá en la <b>Lista de Espera</b> de arriba. Luego podrás asignarlo a un equipo desde
+            "Administrar Plantillas".
+        </p>
+    </div>
+    {% endif %}
+
     {% if current_user.is_admin and not match.is_completed %}
     <div class="card anim-slide-up anim-delay-3" style="margin-top: 20px; padding: 22px;">
         <p class="section-label" style="margin-bottom: 16px;">Administrar Plantillas</p>
@@ -486,6 +504,7 @@
     </div>
 
 </div>
+
 
 <style>
     .section-label {
@@ -1059,5 +1078,33 @@
 
         window.location.reload();
     }
+
+    async function createGuestOnly() {
+        const nameInput = document.getElementById('guest-name-field');
+        const name = nameInput.value.trim();
+        if (!name) return alert("Escribe un nombre.");
+
+        try {
+            // Creamos el invitado y pasamos el match_id para que el backend lo confirme automáticamente
+            const res = await fetch(`/api/players/guests`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': 'Bearer {{ session.get("jwt") }}'
+                },
+                body: JSON.stringify({
+                    name: name,
+                    match_id: {{ match.id }} // Importante para la lista de espera
+                })
+    });
+
+    if (res.ok) {
+        window.location.reload();
+    } else {
+        const err = await res.json();
+        alert("Error: " + err.message);
+    }
+            } catch (e) { alert("Error de conexión"); }
+        }
 </script>
 {% endblock %}

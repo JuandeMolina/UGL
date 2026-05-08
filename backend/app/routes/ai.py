@@ -103,7 +103,7 @@ class AISuggestion(Resource):
             REGLAS:
             - Portero PDA: ID 1. Portero ATG: ID 2.
             - Si es impar ({len(player_ids)}), el equipo con menos jugadores debe ser mejor técnicamente.
-            - Evitar juntar parejas con historial >= 3.
+            - Evitar juntar parejas con historial relativamente grande.
             RESPONDE EXCLUSIVAMENTE EN JSON:
             {{ "pda": [ids], "atg": [ids], "justification": "..." }}
             """

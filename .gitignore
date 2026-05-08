@@ -9,3 +9,4 @@ backend/logs/
 frontend/logs/
 instance/
 weird_rankings.md
+*.xml

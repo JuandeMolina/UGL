@@ -70,6 +70,22 @@ def create_app(config_class=None):
     jwt.init_app(app)
     limiter.init_app(app)
 
+    @jwt.user_lookup_loader
+    def user_lookup_callback(_jwt_header, jwt_data):
+        """
+        Callback to load the user from the database and verify if they are active.
+        This is called on every @jwt_required request.
+        """
+        from ..models.user import User
+        identity = jwt_data["sub"]
+        user = User.query.get(int(identity))
+        
+        # If user doesn't exist or is not active, return None to invalidate token
+        if user and not user.is_active:
+            return None
+            
+        return user
+
     with app.app_context():
         # Register models
         from ..models.goal import Goal
