@@ -131,17 +131,37 @@
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% if messages %}
         {% for category, message in messages %}
-        <div class="toast toast-{{ category }}"
-            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto;">
-            <span class="toast-icon">
-                {% if category == 'error' %}⚠️
-                {% elif category == 'success' %}✅
-                {% elif category == 'warning' %}⚡
-                {% elif category == 'info' %}ℹ️
-                {% else %}📌{% endif %}
-            </span>
+        {% if category == 'error' %}
+        <div
+            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(239, 68, 68, 0.1); color: #991b1b; border: 1px solid rgba(239, 68, 68, 0.3); font-weight: 500;">
+            <span style="font-size: 1.2rem; flex-shrink: 0;">⚠️</span>
             {{ message }}
         </div>
+        {% elif category == 'success' %}
+        <div
+            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(16, 185, 129, 0.1); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.3); font-weight: 500;">
+            <span style="font-size: 1.2rem; flex-shrink: 0;">✅</span>
+            {{ message }}
+        </div>
+        {% elif category == 'warning' %}
+        <div
+            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(245, 158, 11, 0.1); color: #92400e; border: 1px solid rgba(245, 158, 11, 0.3); font-weight: 500;">
+            <span style="font-size: 1.2rem; flex-shrink: 0;">⚡</span>
+            {{ message }}
+        </div>
+        {% elif category == 'info' %}
+        <div
+            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(59, 130, 246, 0.1); color: #1e3a8a; border: 1px solid rgba(59, 130, 246, 0.3); font-weight: 500;">
+            <span style="font-size: 1.2rem; flex-shrink: 0;">ℹ️</span>
+            {{ message }}
+        </div>
+        {% else %}
+        <div
+            style="margin: 80px 24px 0; max-width: 600px; margin-left: auto; margin-right: auto; padding: 16px 20px; border-radius: 12px; display: flex; align-items: center; gap: 12px; background: rgba(148, 163, 184, 0.1); color: #334155; border: 1px solid rgba(148, 163, 184, 0.3); font-weight: 500;">
+            <span style="font-size: 1.2rem; flex-shrink: 0;">📌</span>
+            {{ message }}
+        </div>
+        {% endif %}
         {% endfor %}
         {% endif %}
         {% endwith %}
